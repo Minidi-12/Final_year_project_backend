@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "sourceMap": true,
+        "outDir": "./src/dist",
+        "strict": true,
+        "lib": ["esnext"],
+        "esModuleInterop": true,
+        "skipLibCheck": true
+    },
+
+    "ts-node": {
+        "files": true
+    }
+}
