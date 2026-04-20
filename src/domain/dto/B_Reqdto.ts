@@ -45,7 +45,8 @@ const B_Reqdto = z.object({
       description: z.string().max(200, "Description too long").optional(),
       uploaded_at: z.date().optional(),
     })
-  )
+  ),
+  gn_division_Id: z.string().min(1, "GN Division ID is required"),
 });
 
 export default B_Reqdto;

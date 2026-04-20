@@ -2,7 +2,7 @@ import mongoose from "mongoose"
 
 const gn_DivisionSchema = new mongoose.Schema({
 
-  gn_division: {
+  gn_division_Id: {
     type: String,
     required: true,
   },
