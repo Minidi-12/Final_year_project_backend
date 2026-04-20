@@ -2,7 +2,6 @@ import {z} from 'zod';
 
 const Donationdto = z.object({
   project_id: z.string().min(1, "Project ID is required"),
-  donor_id: z.string().optional().nullable(),
   name: z.string().min(1, "Name is required"),
   nic: z.string().min(1, "NIC is required").regex(/^([0-9]{9}[vVxX]|[0-9]{12})$/,
        "Invalid Sri Lanka NIC — must be 9 digits + V/X or 12 digits"),

@@ -13,10 +13,14 @@ const B_reqSchema = new mongoose.Schema({
     required: true,
     default: [],
   },
-  gn_division: {
+  gn_division_Id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Gn_Division",
     required: true,
+  },
+  predictions: {
+    type: [Predictions.schema],
+    required: false,
   },
   status: {
     type: String,
@@ -46,10 +50,6 @@ const B_reqSchema = new mongoose.Schema({
   },
   cluster_no: {
     type: Number,
-    required: false,
-  },
-  predictions: {
-    type: [Predictions.schema],
     required: false,
   },
  pca_x: {
