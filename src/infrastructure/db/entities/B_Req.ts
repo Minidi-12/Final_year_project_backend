@@ -15,17 +15,19 @@ const B_reqSchema = new mongoose.Schema({
   },
   gn_division_Id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Gn_Division",
-    required: true,
+    ref: "gn_division_Name",
+    required: false,
   },
-  predictions: {
+  Predictions: {
     type: [Predictions.schema],
     required: false,
+    default: []
   },
   status: {
     type: String,
     required: true,
     enum: ["pending","gn_assigned", "verified", "flagged", "resolved", "rejected"],
+    default:"pending"
   },
   gn_verified: {
     type: Boolean,
@@ -33,10 +35,9 @@ const B_reqSchema = new mongoose.Schema({
   },
   reference_no: {
     type: String,
-    required: true,
-    unique: true,
+    required: false,
+    default: null
   },
-  submitted_at: { type: Date, default: Date.now },
   urgency_score: {
     type: Number,
     required: false,
@@ -46,7 +47,6 @@ const B_reqSchema = new mongoose.Schema({
     type: String,
     required: false,
     enum: ["low", "medium", "high"],
-    default:"",
   },
   cluster_no: {
     type: Number,

@@ -38,8 +38,8 @@ const createGn_Division = async (
 ) => {
   try {
     const gn_DivisionData = req.body;
-    if (!gn_DivisionData.gn_division_Id) {
-      throw new ValidationError("Grama_Niladari_Division ID is required");
+    if (!gn_DivisionData.gn_division_Name) {
+      throw new ValidationError("Grama_Niladari_Division is required");
     }
     const newGn_Division = await gn_Division.create(gn_DivisionData);
     res.status(201).json(newGn_Division);
@@ -56,7 +56,7 @@ const updateGn_Division = async (
   try {
     const gn_DivisionData = req.body;
     if (!gn_DivisionData.gn_division_Id) {
-      throw new ValidationError("Grama_Niladari_Division ID is required");
+      throw new ValidationError("Grama_Niladari_Division is required");
     }
     const updatedGn_Division = await gn_Division.findByIdAndUpdate(req.params.id, gn_DivisionData, { new: true });
     if (!updatedGn_Division) {

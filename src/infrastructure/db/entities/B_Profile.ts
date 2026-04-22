@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { required } from "zod/mini";
 
 const B_profileSchema = new mongoose.Schema({
   nic: {
@@ -23,6 +22,10 @@ const B_profileSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  gn_division: {
+    type: String,
+    required: true,
+  },
   family_size: {
     type: Number,
     required: true,
@@ -36,9 +39,10 @@ const B_profileSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  occupation: {
+  employment_type: {
     type: String,
     required: true,
+    enum: ["Government","Private","Self employed","Unemployed","Daily wage"]
   },
   GovtAllowance: {
     type: [String],
@@ -48,12 +52,11 @@ const B_profileSchema = new mongoose.Schema({
   otherIncomeSources: {
     type: [String],
     required: true,
-    default: 0,
+    default: [0]
   },
  chronic_illness: {
     exists: { type: Boolean, default: false },
-    description: { type: String, default: "" },
-    required: true,
+    description: { type: String, default: "" }
   },
   nearest_hospitalkm: {
     type: Number,
@@ -97,6 +100,11 @@ const B_profileSchema = new mongoose.Schema({
   electricity_access: {
     type: Boolean,
     required: true,
+  },
+  regular_Healthcare_Access: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
   support_types: {
     type: [String],
