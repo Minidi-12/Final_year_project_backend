@@ -4,7 +4,7 @@ const VolunteerSchema = new mongoose.Schema({
   project_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
+      required: false,
     },
   nic: {
     type: String,

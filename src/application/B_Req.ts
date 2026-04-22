@@ -10,7 +10,7 @@ const getallB_Reqs = async (
     next: NextFunction
 ) => {
     try {
-        const b_reqs = await B_Req.find().populate("b_profile").populate("req_evidence").populate("predictions").populate("gn_division_Id");
+        const b_reqs = await B_Req.find().populate("b_profile").populate("req_evidence").populate("gn_division_Id");
         res.status(200).json(b_reqs);
     } catch (error) {
         next(error);
