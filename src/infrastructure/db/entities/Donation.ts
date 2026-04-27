@@ -4,7 +4,7 @@ const DonationSchema = new mongoose.Schema({
   project_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Project",
-    required: false,
+    required: true,
   },
   name: {
     type: String,

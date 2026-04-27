@@ -9,6 +9,11 @@ const B_profileSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  phone_no: {
+    type: String,
+    required: true,
+    regex: /^[0-9]{10}$/,
+  },
   age: {
     type: Number,
     required: true,

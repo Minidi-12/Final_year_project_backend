@@ -1,18 +1,17 @@
 import numpy as np
 from config import *
 
-class UrgencyScore:
+class UrgencyScore: 
     def calculate_urgency_score(self, row, gn_verified=False):
         score = 0
         
-        # High urgency triggers (15 points each)
         if row.get('monthly_income', 0) < LOW_INCOME_THRESHOLD:
             score += 15
-
-        chronic_illness = row.get('chronic_illness', {})
-        if isinstance(chronic_illness, dict) and chronic_illness.get('exists', False):
-            if not row.get('regular_Healthcare_Access', False):
-                score += 15
+        
+        if (isinstance(row.get('chronic_illness', {}), dict) and 
+            row.get('chronic_illness', {}).get('exists', False) and
+            not row.get('regular_Healthcare_Access', False)):
+            score += 15
         
         if not row.get('safewater_access', False) and not row.get('sanitation_access', False):
             score += 15
@@ -20,15 +19,11 @@ class UrgencyScore:
         if row.get('disabilityInHousehold', False):
             score += 15
         
-        # Medium urgency triggers (10 points each)
         income = row.get('monthly_income', 0)
         if LOW_INCOME_THRESHOLD <= income < MEDIUM_INCOME_THRESHOLD:
             score += 10
         
-        GovtAllowance = row.get('GovtAllowance', {})
-        otherIncomeSources = row.get('otherIncomeSources', {})
-        if (not isinstance(GovtAllowance, dict) or not GovtAllowance.get('receiving', False)) and \
-           (not isinstance(otherIncomeSources, dict) or not otherIncomeSources.get('receiving', False)):
+        if not row.get('GovtAllowance', []) and not row.get('otherIncomeSources', []):
             score += 10
         
         if row.get('childrenDroppedOut', False):
@@ -37,11 +32,9 @@ class UrgencyScore:
         if row.get('nearest_hospitalkm', 0) > HOSPITAL_DISTANCE_THRESHOLD:
             score += 10
         
-        housing_type = row.get('housing_type','')
-        if housing_type in ['temporary', 'no-fixed_shelter']:
-            score +=10
+        if row.get('housing_type', '') in ['temporary', 'no-fixed_shelter']:
+            score += 10
         
-        # LOW urgency triggers (5 points each)
         if row.get('selfrated_urgency', 3) >= 4:
             score += 5
         
@@ -51,41 +44,36 @@ class UrgencyScore:
         if not row.get('electricity_access', False):
             score += 5
         
+        # Cap at 100 and apply GN verification bonus
         score = min(score, 100)
-        
         if gn_verified:
             score = min(score * 1.2, 100)
-        
-        return round(score,2)
+        return round(score, 2)
     
     def get_urgency_label(self, score):
         if score >= HIGH_URGENCY_MIN:
             return 'High'
         elif score >= MODERATE_URGENCY_MIN:
             return 'Moderate'
-        else:
-            return 'Stable'
+        return 'Stable'
     
     def score_all_beneficiaries(self, df):
         scores = []
         labels = []
         
         for idx, row in df.iterrows():
-            gn_verified = row.get('gn_verified', False)
-            score = self.calculate_urgency_score(row, gn_verified)
+            score = self.calculate_urgency_score(row, row.get('gn_verified', False))
             label = self.get_urgency_label(score)
-            
             scores.append(score)
             labels.append(label)
         
-        print(f"Scored {len(scores)} beneficiaries")
+        high = labels.count('High')
+        moderate = labels.count('Moderate')
+        stable = labels.count('Stable')
         
-        high_count = labels.count('High')
-        moderate_count = labels.count('Moderate')
-        stable_count = labels.count('Stable')
-        
-        print(f"  High urgency: {high_count}")
-        print(f"  Moderate urgency: {moderate_count}")
-        print(f"  Stable: {stable_count}")
+        print(f"\n=== URGENCY SCORING ===")
+        print(f"Total: {len(scores)} beneficiaries")
+        print(f"High: {high} | Moderate: {moderate} | Stable: {stable}")
+        print(f"Range: {min(scores):.2f} - {max(scores):.2f} | Average: {np.mean(scores):.2f}")
         
         return scores, labels
