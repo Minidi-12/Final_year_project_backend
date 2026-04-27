@@ -11,7 +11,7 @@ def main():
     
     try:
         processor = DataProcessor()
-        df, features, scaled_data, collection = processor.prepare_data()
+        df, features, scaled_data, collection, beneficiary_profiles = processor.prepare_data()
         
         # DEBUG: Check data quality
         print(f"\n=== DATA QUALITY CHECK ===")
@@ -34,7 +34,7 @@ def main():
         
         # Urgency Scoring
         scorer = UrgencyScore()
-        urgency_scores, urgency_labels = scorer.score_all_beneficiaries(df)
+        urgency_scores, urgency_labels = scorer.score_all_beneficiaries(beneficiary_profiles)
         
         # 3-Month Predictions
         predictor = UrgencyPredictor()
