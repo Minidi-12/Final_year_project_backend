@@ -26,7 +26,7 @@ class DataProcessor:
             else:
                 profile = {}
             
-            # numeric and boolean fields
+            
             features_list.append({
                 'monthly_income': profile.get('monthly_income', 0),
                 'family_size': profile.get('family_size', 0),
@@ -92,8 +92,6 @@ class DataProcessor:
         beneficiary_profiles = self.extract_beneficiary_profiles(df)
         
         features = self.extract_features(df)
-        
-        # Scale features for clustering
         scaled_features = self.scaler.fit_transform(features)
         
         print(f"\n=== DATA PREPARATION COMPLETE ===")

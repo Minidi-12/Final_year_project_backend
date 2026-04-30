@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { match } from "node:assert";
 
 const B_profileSchema = new mongoose.Schema({
   nic: {
@@ -12,7 +13,7 @@ const B_profileSchema = new mongoose.Schema({
   phone_no: {
     type: String,
     required: true,
-    regex: /^[0-9]{10}$/,
+    match: /^[0-9]{10}$/,
   },
   age: {
     type: Number,
@@ -37,7 +38,7 @@ const B_profileSchema = new mongoose.Schema({
   },
   children_under_18: {
     type: Number,
-    required: true,
+    required: false,
     default: 0,
   },
   monthly_income: {
@@ -51,13 +52,14 @@ const B_profileSchema = new mongoose.Schema({
   },
   GovtAllowance: {
     type: [String],
-    required: true,
+    required: false,
     enum: ["Samurdhi", "Elderly Allowance", "Disability Allowance", "Ath Wasuma", "Other"],
+    default: [],
   },
   otherIncomeSources: {
-    type: [String],
-    required: true,
-    default: [0]
+    type: String,
+    required: false,
+    default: "",
   },
  chronic_illness: {
     exists: { type: Boolean, default: false },
@@ -69,7 +71,7 @@ const B_profileSchema = new mongoose.Schema({
   },
   disabilityInHousehold: {
     type: Boolean,
-    required: true,
+    required: false,
     default: false,
   },
   highestEducationLevel: {
@@ -84,7 +86,7 @@ const B_profileSchema = new mongoose.Schema({
   },
   childrenDroppedOut: {
     type: Boolean,
-    required: true,
+    required: false,
     default: false,
   },
   housing_type: {
@@ -94,21 +96,21 @@ const B_profileSchema = new mongoose.Schema({
   },
   safewater_access: {
     type: Boolean,
-    required: true,
+    required: false,
     default: false,
   },
   sanitation_access: {
     type: Boolean,
-    required: true,
+    required: false,
     default: false,
   },
   electricity_access: {
     type: Boolean,
-    required: true,
+    required: false,
   },
   regular_Healthcare_Access: {
     type: Boolean,
-    required: true,
+    required: false,
     default: false,
   },
   support_types: {
@@ -118,13 +120,13 @@ const B_profileSchema = new mongoose.Schema({
   },
   support_description: {
     type: String,
-    required: false,
+    required: true,
   },
   selfrated_urgency: {
-    type: Number,
-    required: true,
-    enum: [1, 2, 3, 4, 5],
-  },
+  type: String, 
+  required: true,
+  enum: ["1", "2", "3", "4", "5"], 
+  }
 
 });
 
