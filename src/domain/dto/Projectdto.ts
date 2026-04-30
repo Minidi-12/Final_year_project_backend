@@ -14,8 +14,8 @@ const Projectdto = z.object({
   budget: z.number().min(0, "Budget must be a positive number"),
   fundsRaised: z.number().min(0, "Funds raised must be a positive number").default(0),
   volunteers_needed: z.number().min(0, "Volunteers needed must be a positive number").default(0),
-  start_date: z.date(),
-  end_date: z.date().optional(),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date().optional(),
 })
 
 .refine((data) => {

@@ -4,7 +4,7 @@ const NotificationSchema = new mongoose.Schema({
   requestId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "B_Req",
-      required: false,
+      required: true,
     },
   type: {
     type: String,

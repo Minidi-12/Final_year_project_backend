@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const Req_evidenceSchema = new mongoose.Schema({
+const Req_EvidenceSchema = new mongoose.Schema({
   fileUrl: {
     type: String,
     required: true,
@@ -16,5 +16,5 @@ const Req_evidenceSchema = new mongoose.Schema({
   uploaded_at: { type: Date, default: Date.now },
 });
 
-const Req_Evidence = mongoose.model("Req_Evidence", Req_evidenceSchema);
+const Req_Evidence = mongoose.model("Req_Evidence", Req_EvidenceSchema);
 export default Req_Evidence;

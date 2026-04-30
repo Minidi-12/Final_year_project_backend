@@ -6,25 +6,21 @@ const VolunteerSchema = new mongoose.Schema({
       ref: "Project",
       required: true,
     },
-  nic: {
-    type: String,
-    required: true,
-  },
   name: {
     type: String,
     required: true,
   },
   email: {
     type: String,
-    required: false,
+    required: true,
   },
   Phone_no: {
     type: String,
-    required: false,
+    required: true,
   },
   skills: {
     type: [String],
-    required: false,
+    required: true,
     default: [],
   },
   availability: {
@@ -32,15 +28,9 @@ const VolunteerSchema = new mongoose.Schema({
     required: false,
     enum: ["weekdays", "weekends", "flexible"],
   },
-  district: {
+  message: {
     type: String,
-    required: false,
-  },
-  vol_status: {
-    type: String,
-    required: false,
-    default: "pending",
-    enum: ["active", "inactive", "pending", "rejected", "approved","withdrawn"],
+    required: false
   },
   registered_at: { type: Date, default: Date.now },
 });

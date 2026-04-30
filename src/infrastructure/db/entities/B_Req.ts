@@ -3,29 +3,44 @@ import B_Profile from "./B_Profile";
 import Req_Evidence from "./Req_Evidence";
 import Predictions from "./predictions";
 
+const Req_EvidenceSubSchema = new mongoose.Schema(
+  {
+    fileUrl: { type: String, required: true },
+    file_name: { type: String, required: false },
+    description: { type: String, required: false },
+    uploaded_at: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const B_reqSchema = new mongoose.Schema({
   b_profile: {
     type: [B_Profile.schema],
     required: true,
   },
-  req_evidence: {
-    type: [Req_Evidence.schema],
-    required: true,
-    default: [],
-  },
+  req_evidence: [Req_EvidenceSubSchema],
   gn_division_Id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Gn_Division",
-    required: true,
+    ref: "gn_division_Name",
+    required: false,
   },
-  predictions: {
+  Predictions: {
     type: [Predictions.schema],
     required: false,
+    default: [],
   },
   status: {
     type: String,
     required: true,
-    enum: ["pending","gn_assigned", "verified", "flagged", "resolved", "rejected"],
+    enum: [
+      "pending",
+      "gn_assigned",
+      "verified",
+      "flagged",
+      "resolved",
+      "rejected",
+    ],
+    default: "pending",
   },
   gn_verified: {
     type: Boolean,
@@ -33,26 +48,24 @@ const B_reqSchema = new mongoose.Schema({
   },
   reference_no: {
     type: String,
-    required: true,
-    unique: true,
+    required: false,
+    default: null,
   },
-  submitted_at: { type: Date, default: Date.now },
   urgency_score: {
     type: Number,
     required: false,
-    default:"0",
+    default: "0",
   },
   urgency_label: {
     type: String,
     required: false,
     enum: ["low", "medium", "high"],
-    default:"",
   },
   cluster_no: {
     type: Number,
     required: false,
   },
- pca_x: {
+  pca_x: {
     type: Number,
     required: false,
     default: null,
