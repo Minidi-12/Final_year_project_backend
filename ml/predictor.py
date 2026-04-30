@@ -9,18 +9,14 @@ class UrgencyPredictor:
         
         for month in range(1, 4):
             if status == 'resolved':
-                # Resolved cases go to 0
                 predicted_score = 0
             elif current_score > 70 and status == 'pending':
-                # High urgency cases worsen without intervention
                 increase = np.random.randint(5, 8)
                 predicted_score = min(current_score + (increase * month), 100)
             elif 50 <= current_score <= 70 and not gn_verified:
-                # Medium urgency with no verification
                 increase = np.random.randint(3, 6)
                 predicted_score = min(current_score + (increase * month), 100)
             elif current_score < 50:
-                # Low urgency cases - stable or slight decrease
                 GovtAllowance = row.get('GovtAllowance', {})
                 has_support = isinstance(GovtAllowance, dict) and GovtAllowance.get('receiving', False)
                 

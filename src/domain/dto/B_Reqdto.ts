@@ -38,20 +38,15 @@ const B_Reqdto = z
           "Invalid employment type",
         ),
         GovtAllowance: z
-          .array(
-            z.enum(
-              [
-                "Samurdhi",
-                "Elderly Allowance",
-                "Disability Allowance",
-                "Ath Wasuma",
-                "Other",
-              ],
-              "Invalid government allowance",
-            ),
+        .array(
+          z.enum(
+            ["Samurdhi", "Elderly Allowance", "Disability Allowance", "Ath Wasuma", "Other"],
+            "Invalid government allowance"
           )
-          .min(1, "At least one government allowance is required"),
-        otherIncomeSources: z.array(z.string()).optional(),
+        )
+        .optional()
+        .default([]),
+       otherIncomeSources: z.string().optional().default(""),
         chronic_illness: z.object({
           exists: z.boolean().default(false),
           description: z.string().optional(),

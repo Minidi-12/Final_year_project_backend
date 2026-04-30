@@ -22,11 +22,10 @@ const globalErrorHandlingMiddleware = (
   } else if (err instanceof UnauthorizedError) {
     res.status(401).json({ message: err.message });
   } else {
-    // Return the actual error message in development
     res.status(500).json({ 
       message: "Internal server error",
-      error: err.message,  // Add this for debugging
-      details: err.toString() // Add this too
+      error: err.message,  
+      details: err.toString() 
     });
   }
 };
