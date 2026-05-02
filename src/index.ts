@@ -9,6 +9,8 @@ import News_postRouter from './api/News_post';
 import notificationRouter from './api/notification';
 import projectRouter from './api/Projects';
 import volunteerRouter from './api/volunteers';
+import router from './api/User';
+import adminRouter from "./api/Admin";
 import cors from 'cors';
 
 const app = express();
@@ -31,6 +33,10 @@ app.use('/api/notifications', notificationRouter);
 app.use('/api/projects', projectRouter);
 
 app.use('/api/volunteers', volunteerRouter);
+
+app.use('/api/auth', router);
+
+app.use('/api/admin', adminRouter);
 
 connectDB();
 

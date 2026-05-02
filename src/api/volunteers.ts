@@ -4,7 +4,10 @@ import {
     getVolunteerById, 
     createVolunteer, 
     updateVolunteer, 
-    deleteVolunteerById 
+    deleteVolunteerById,
+    getVolunteerRecommendations,
+    previewMatchingProjects,
+    runMLMatching
 } from '../application/volunteers';
 
 const volunteerRouter = express.Router();
@@ -19,5 +22,18 @@ volunteerRouter
     .get(getVolunteerById)
     .put(updateVolunteer)
     .delete(deleteVolunteerById);
+
+// ML Matching routes
+volunteerRouter
+    .route('/:id/recommendations')
+    .get(getVolunteerRecommendations);
+
+volunteerRouter
+    .route('/match/preview')
+    .post(previewMatchingProjects);
+
+volunteerRouter
+    .route('/match/run')
+    .post(runMLMatching);
 
 export default volunteerRouter;
