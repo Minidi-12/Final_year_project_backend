@@ -8,17 +8,8 @@ const ProjectSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ["health", "education", "environment", "community_development", "disaster_relief", "other"],
+    enum: ["health", "education", "environment", "community_development", "disaster_relief", "infrastructure", "other"],
   },
-  subCategory: {
-  type: String,
-  required: true,
-  enum: ["eye_clinic","dental_clinic", "general_clinic","blood_donation","maternal_health","child_health","elderly_care",
-    "disability_support","scholarship","tuition_support","school_supplies","digital_literacy","sanitary_access","clean_water",
-    "waste_management","housing_support","counselling","legal_aid","youth_development","community_awareness","elder_companionship",
-    "women_empowerment","disaster_relief","pre-loved_clothing_distribution","emergency_food","food_assistance","tech_project",
-    "microfinance","agriculture_support","entrepreneurship"],
-},
   description: {
     type: String,
     required: true,
@@ -31,6 +22,11 @@ const ProjectSchema = new mongoose.Schema({
   location: {
     type: String,
     required: true,
+  },
+  requiredSkills: {
+    type: [String],
+    required: true,
+    default: []
   },
   budget: {
     type: Number,
@@ -54,6 +50,14 @@ const ProjectSchema = new mongoose.Schema({
   end_date: {
     type: Date,
     required: false,
+  },
+  skillsEmbedding: {
+    type: [Number],
+    default: []
+  },
+  skillsText: {
+    type: String,
+    default: ""
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },

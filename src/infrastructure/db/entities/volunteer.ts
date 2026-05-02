@@ -32,6 +32,18 @@ const VolunteerSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  matchScore: {
+    type: Number,
+    default: 0,
+  },
+  recommendedProjects: [{
+    project_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project'
+    },
+    matchScore: Number,
+    matchedSkills: [String]
+  }],
   registered_at: { type: Date, default: Date.now },
 });
 

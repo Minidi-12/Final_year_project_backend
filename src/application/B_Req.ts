@@ -3,6 +3,10 @@ import B_Reqdto from "../domain/dto/B_Reqdto";
 import ValidationError from "../domain/errors/validation-error";
 import NotFoundError from "../domain/errors/not-found-error";
 import B_Req from "../infrastructure/db/entities/B_Req";
+import { randomUUID } from "crypto";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import S3 from "../infrastructure/s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 const getallB_Reqs = async (
   req: Request,
@@ -93,10 +97,45 @@ const deleteB_ReqbyId = async (
   }
 };
 
+const uploadProductImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body;
+    const { fileType } = body;
+
+    const id = randomUUID();
+
+    const url = await getSignedUrl(
+      S3,
+      new PutObjectCommand({
+        Bucket: process.env.CLOUDFLARE_BUCKET_NAME,
+        Key: id,
+        ContentType: fileType,
+      }),
+      {
+        expiresIn: 60,
+      }
+    );
+
+    res
+      .status(200)
+      .json({
+        url,
+        publicURL: `${process.env.CLOUDFLARE_PUBLIC_DOMAIN}/${id}`,
+      });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   getallB_Reqs,
   getB_ReqById,
   createB_Req,
   updateB_Req,
   deleteB_ReqbyId,
+  uploadProductImage
 };

@@ -4,7 +4,8 @@ import {
     getProjectById, 
     createProject, 
     updateProjectStatus, 
-    deleteProjectById
+    deleteProjectById,
+    getActiveProjects
 } from '../application/Projects';
 
 const projectRouter = express.Router();
@@ -19,5 +20,9 @@ projectRouter
     .get(getProjectById)
     .put(updateProjectStatus)
     .delete(deleteProjectById);
+
+projectRouter
+    .route('/active')
+    .get(getActiveProjects);
 
 export default projectRouter;

@@ -90,11 +90,28 @@ const deleteProjectById = async (
     }
 };
 
+const getActiveProjects = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const projects = await Project.find({ status: 'active' });
+        res.status(200).json({
+            count: projects.length,
+            projects: projects
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export { 
     getallProjects, 
     getProjectById, 
     createProject, 
     updateProjectStatus, 
-    deleteProjectById 
+    deleteProjectById,
+    getActiveProjects 
 };
 
