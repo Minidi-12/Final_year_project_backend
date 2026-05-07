@@ -15,14 +15,13 @@ B_ReqRouter
     .get(getallB_Reqs)
     .post(createB_Req);
 
+B_ReqRouter.post('/images', uploadProductImage);
+
 B_ReqRouter
     .route('/:id')
     .get(getB_ReqById)
     .put(updateB_Req)
     .delete(deleteB_ReqbyId);
 
-B_ReqRouter
-    .route('/images')
-    .post(uploadProductImage);
 
 export default B_ReqRouter;

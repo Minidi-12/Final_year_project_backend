@@ -12,6 +12,8 @@ import volunteerRouter from './api/volunteers';
 import router from './api/User';
 import adminRouter from "./api/Admin";
 import cors from 'cors';
+import { startGnAssignmentScheduler } from './application/Gnassign_schedular';
+import GnofficerRouter from './api/Gnofficer';
 
 const app = express();
 app.use(express.json());
@@ -19,8 +21,6 @@ app.use(cors({origin: 'http://localhost:5173'}));
 
 
 app.use('/api/b_reqs', B_ReqRouter);
-
-app.use(globalErrorHandlingMiddleware);
 
 app.use('/api/donations', DonationRouter);
 
@@ -38,10 +38,16 @@ app.use('/api/auth', router);
 
 app.use('/api/admin', adminRouter);
 
-connectDB();
+app.use('/api/gnofficers', GnofficerRouter);
 
-const PORT = process.env.PORT || 3000;
+app.use(globalErrorHandlingMiddleware);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}); 
+connectDB().then(() => {
+  startGnAssignmentScheduler();
+
+  const PORT = process.env.PORT || 3000;    
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });                                        
+});                                       

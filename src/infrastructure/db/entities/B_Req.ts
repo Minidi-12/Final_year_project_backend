@@ -21,7 +21,7 @@ const B_reqSchema = new mongoose.Schema({
   req_evidence: [Req_EvidenceSubSchema],
   gn_division_Id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "gn_division_Name",
+    ref: "Gn_Division",        
     required: false,
   },
   Predictions: {

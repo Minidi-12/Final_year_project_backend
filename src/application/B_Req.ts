@@ -7,6 +7,12 @@ import { randomUUID } from "crypto";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import S3 from "../infrastructure/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  notifyRequestSubmitted,
+  notifyStatusChanged,
+  notifyRequestVerified,
+  notifyRequestResolved,
+} from "../infrastructure/whatsapp/notificationService";
 
 const getallB_Reqs = async (
   req: Request,
@@ -57,6 +63,8 @@ const createB_Req = async (req: Request, res: Response, next: NextFunction) => {
     const createdB_Req = await B_Req.create(newb_req.data);
     console.log("Saved B_Req:", JSON.stringify(createdB_Req, null, 2));
 
+    await notifyRequestSubmitted(createdB_Req._id);
+
     res.status(201).json(createdB_Req);
   } catch (error) {
     next(error);
@@ -65,15 +73,41 @@ const createB_Req = async (req: Request, res: Response, next: NextFunction) => {
 
 const updateB_Req = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const updatedb_req = await B_Req.findByIdAndUpdate(
+    const existingReq = await B_Req.findById(req.params.id);
+    if (!existingReq) {
+      throw new NotFoundError("Beneficiary Request not found");
+    }
+
+    const updatedB_req = await B_Req.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true },
     );
-    if (!updatedb_req) {
+
+    if (!updatedB_req) {
       throw new NotFoundError("Beneficiary Request not found");
     }
-    res.status(200).json(updatedb_req);
+
+
+    const newStatus = req.body.status;
+    if (newStatus && newStatus !== existingReq.status) {
+      
+      if (newStatus === "verified") {
+        // Trigger 4: GN has verified the request
+        await notifyRequestVerified(updatedB_req._id);
+
+      } else if (newStatus === "resolved") {
+        // Trigger 5: NGO has resolved the request
+        await notifyRequestResolved(updatedB_req._id);
+
+      } else {
+        // Trigger 2 & 3: All other status changes
+        // (pending → gn_assigned, flagged, rejected, etc.)
+        await notifyStatusChanged(updatedB_req._id, newStatus);
+      }
+    }
+
+    res.status(200).json(updatedB_req);
   } catch (error) {
     next(error);
   }
@@ -120,12 +154,10 @@ const uploadProductImage = async (
       }
     );
 
-    res
-      .status(200)
-      .json({
-        url,
-        publicURL: `${process.env.CLOUDFLARE_PUBLIC_DOMAIN}/${id}`,
-      });
+    res.status(200).json({
+      url,
+      publicURL: `${process.env.CLOUDFLARE_PUBLIC_DOMAIN}/${id}`,
+    });
   } catch (error) {
     next(error);
   }
@@ -137,5 +169,5 @@ export {
   createB_Req,
   updateB_Req,
   deleteB_ReqbyId,
-  uploadProductImage
+  uploadProductImage,
 };
