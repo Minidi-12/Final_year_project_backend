@@ -41,7 +41,6 @@ class VolunteerProjectMatcher:
         category = project.get('category', '').replace('_', ' ')
         title = project.get('title', '')
         
-        # Combine all text for better matching
         text = ' '.join(skills) + ' ' + category + ' ' + title + ' ' + description
         return text.lower().strip()
     
@@ -51,31 +50,26 @@ class VolunteerProjectMatcher:
         return ' '.join(skills).lower().strip()
     
     def compute_skill_embeddings(self, projects_df):
-        """Generate TF-IDF embeddings for all projects"""
         print("\n GENERATING SKILL EMBEDDINGS ")
         
         if len(projects_df) == 0:
             print("No projects to process")
             return np.array([])
         
-        # Prepare texts
         project_texts = []
         for idx, row in projects_df.iterrows():
             text = self.prepare_project_skills_text(row)
             project_texts.append(text)
             
-            # Store skillsText in MongoDB
             self.projects_collection.update_one(
                 {'_id': row['_id']},
                 {'$set': {'skillsText': text}}
             )
         
-        # Fit vectorizer on all project texts
         if project_texts:
             self.vectorizer.fit(project_texts)
             embeddings = self.vectorizer.transform(project_texts).toarray()
             
-            # Store embeddings in MongoDB
             for idx, row in projects_df.iterrows():
                 self.projects_collection.update_one(
                     {'_id': row['_id']},
@@ -89,15 +83,10 @@ class VolunteerProjectMatcher:
         return np.array([])
     
     def find_matching_projects(self, volunteer_skills, top_n=5):
-        """
-        Find top N matching projects for given volunteer skills
-        Returns: List of matching projects with scores
-        """
         if not volunteer_skills or len(volunteer_skills) == 0:
             print("No skills provided for matching")
             return []
         
-        # Load projects with embeddings
         projects = list(self.projects_collection.find({
             'status': 'active',
             'skillsEmbedding': {'$exists': True, '$ne': []}
@@ -107,35 +96,29 @@ class VolunteerProjectMatcher:
             print("No projects with embeddings found")
             return []
         
-        # Prepare volunteer skills text
         volunteer_text = self.prepare_volunteer_skills_text(volunteer_skills)
         
         if not volunteer_text:
             print("Volunteer skills text is empty")
             return []
         
-        # Transform volunteer skills using same vectorizer
         try:
             volunteer_embedding = self.vectorizer.transform([volunteer_text]).toarray()
         except Exception as e:
             print(f"Error transforming volunteer skills: {e}")
             return []
         
-        # Get project embeddings
         project_embeddings = np.array([p['skillsEmbedding'] for p in projects])
         
-        # Calculate cosine similarity
         similarities = cosine_similarity(volunteer_embedding, project_embeddings)[0]
         
-        # Get top N matches
         top_indices = np.argsort(similarities)[::-1][:top_n]
         
         matches = []
         for idx in top_indices:
-            if similarities[idx] > 0:  # Only include positive matches
+            if similarities[idx] > 0: 
                 project = projects[idx]
                 
-                # Find which skills matched
                 matched_skills = []
                 project_skills = project.get('requiredSkills', [])
                 
@@ -146,7 +129,6 @@ class VolunteerProjectMatcher:
                             if proj_skill not in matched_skills:
                                 matched_skills.append(proj_skill)
                 
-                # Convert ObjectId to string
                 project_id = str(project['_id'])
                 
                 matches.append({
@@ -163,7 +145,6 @@ class VolunteerProjectMatcher:
         return matches
     
     def update_volunteer_recommendations(self, volunteer_id, matches):
-        """Store recommended projects in volunteer document"""
         if not matches:
             return
         
@@ -173,7 +154,6 @@ class VolunteerProjectMatcher:
             'matchedSkills': match['matched_skills']
         } for match in matches]
         
-        # Update volunteer document
         result = self.volunteers_collection.update_one(
             {'_id': volunteer_id},
             {'$set': {
@@ -185,10 +165,9 @@ class VolunteerProjectMatcher:
         return result.modified_count > 0
     
     def batch_compute_all_matches(self):
-        """Compute matches for all volunteers"""
         print("\n BATCH MATCHING ALL VOLUNTEERS ")
         
-        # First, compute embeddings for all projects
+        # compute embeddings for all projects
         projects_df = self.load_projects()
         if len(projects_df) == 0:
             print("No projects to match against")
@@ -196,7 +175,6 @@ class VolunteerProjectMatcher:
         
         self.compute_skill_embeddings(projects_df)
         
-        # Get all volunteers (no status filter since your schema doesn't have it)
         volunteers = list(self.volunteers_collection.find({}))
         
         if not volunteers:
@@ -214,7 +192,7 @@ class VolunteerProjectMatcher:
                     updated = self.update_volunteer_recommendations(volunteer['_id'], matches)
                     if updated:
                         matched_count += 1
-                        print(f"  ✓ {volunteer['name']}: {matches[0]['match_score']:.1f}% → {matches[0]['title']}")
+                        print(f"  {volunteer['name']}: {matches[0]['match_score']:.1f}% → {matches[0]['title']}")
         
         print(f"\n Successfully matched {matched_count}/{len(volunteers)} volunteers")
     

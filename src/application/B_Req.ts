@@ -93,16 +93,12 @@ const updateB_Req = async (req: Request, res: Response, next: NextFunction) => {
     if (newStatus && newStatus !== existingReq.status) {
       
       if (newStatus === "verified") {
-        // Trigger 4: GN has verified the request
         await notifyRequestVerified(updatedB_req._id);
 
       } else if (newStatus === "resolved") {
-        // Trigger 5: NGO has resolved the request
         await notifyRequestResolved(updatedB_req._id);
 
       } else {
-        // Trigger 2 & 3: All other status changes
-        // (pending → gn_assigned, flagged, rejected, etc.)
         await notifyStatusChanged(updatedB_req._id, newStatus);
       }
     }

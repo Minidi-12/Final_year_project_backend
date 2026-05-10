@@ -40,6 +40,7 @@ const createProject = async (
     next: NextFunction
 ) => {
     try {
+        
         const projectData = Projectdto.parse(req.body);
         const project = await Project.create(projectData);
         res.status(201).json(project);

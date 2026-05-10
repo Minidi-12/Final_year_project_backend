@@ -14,15 +14,11 @@ class MLUrgencyModel:
         self.is_trained = False
         
     def generate_synthetic_data(self, real_profiles, n_synthetic=100):
-        """
-        Generate synthetic beneficiary data based on real data distributions
-        """
-        print(f"\n=== GENERATING SYNTHETIC DATA ===")
+        print(f"\n GENERATING SYNTHETIC DATA")
         print(f"Real samples: {len(real_profiles)}")
         
         synthetic_data = []
         
-        # Analyze real data distributions
         income_mean = real_profiles['monthly_income'].mean()
         income_std = real_profiles['monthly_income'].std()
         family_mean = real_profiles['family_size'].mean()
@@ -30,7 +26,7 @@ class MLUrgencyModel:
         np.random.seed(RANDOM_STATE)
         
         for i in range(n_synthetic):
-            # Generate realistic values based on distributions
+            # realistic values based on distributions
             monthly_income = max(0, np.random.normal(income_mean, income_std))
             family_size = np.random.randint(2, 9)
             
@@ -38,7 +34,7 @@ class MLUrgencyModel:
             chronic_illness_prob = 0.3 if monthly_income < LOW_INCOME_THRESHOLD else 0.15
             chronic_illness_exists = np.random.choice([True, False], p=[chronic_illness_prob, 1-chronic_illness_prob])
             
-            # Low income → likely has government support
+            # Low income - likely has government support
             govt_allowance_prob = 0.7 if monthly_income < MEDIUM_INCOME_THRESHOLD else 0.3
             has_govt_allowance = np.random.choice([True, False], p=[govt_allowance_prob, 1-govt_allowance_prob])
             
@@ -71,9 +67,6 @@ class MLUrgencyModel:
         return synthetic_df
     
     def prepare_ml_features(self, profiles_df):
-        """
-        Extract features for ML model
-        """
         features = pd.DataFrame({
             'monthly_income': profiles_df['monthly_income'],
             'family_size': profiles_df['family_size'],
@@ -102,15 +95,10 @@ class MLUrgencyModel:
         return features
     
     def train(self, real_profiles, urgency_scorer, use_synthetic=True):
-        """
-        Train ML model on real + synthetic data
-        """
-        print(f"\n=== TRAINING ML MODEL ===")
+        print(f"\n TRAINING ML MODEL ")
         
-        # Prepare real data
         real_features = self.prepare_ml_features(real_profiles)
         
-        # Calculate urgency labels using rule-based system
         real_labels = []
         for idx, row in real_profiles.iterrows():
             score = urgency_scorer.calculate_urgency_score(row)
@@ -129,7 +117,6 @@ class MLUrgencyModel:
                 label = urgency_scorer.get_urgency_label(score)
                 synthetic_labels.append(label)
             
-            # Combine
             X = pd.concat([real_features, synthetic_features], ignore_index=True)
             y = real_labels + synthetic_labels
             

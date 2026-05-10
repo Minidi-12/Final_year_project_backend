@@ -44,7 +44,6 @@ class UrgencyScore:
         if not row.get('electricity_access', False):
             score += 5
         
-        # Cap at 100 and apply GN verification bonus
         score = min(score, 100)
         if gn_verified:
             score = min(score * 1.2, 100)

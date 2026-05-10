@@ -14,6 +14,8 @@ import adminRouter from "./api/Admin";
 import cors from 'cors';
 import { startGnAssignmentScheduler } from './application/Gnassign_schedular';
 import GnofficerRouter from './api/Gnofficer';
+import webhookRouter from './api/Webhook';
+import { startRiskAlertScheduler } from './application/riskAlert.schedular';
 
 const app = express();
 app.use(express.json());
@@ -40,10 +42,16 @@ app.use('/api/admin', adminRouter);
 
 app.use('/api/gnofficers', GnofficerRouter);
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use("/api", webhookRouter);
+
 app.use(globalErrorHandlingMiddleware);
 
 connectDB().then(() => {
   startGnAssignmentScheduler();
+  startRiskAlertScheduler();
 
   const PORT = process.env.PORT || 3000;    
 

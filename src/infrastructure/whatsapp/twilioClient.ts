@@ -8,16 +8,14 @@ const client = twilio(
 );
 
 /**
- * Sends a WhatsApp message via Twilio.
- * @param toPhone - local format "07XXXXXXXX" or international "+947XXXXXXXX"
- * @param message - message body
+ * @param toPhone 
+ * @param message 
  */
 export const sendWhatsApp = async (
   toPhone: string,
   message: string
 ): Promise<void> => {
   try {
-    // Normalize phone: "07X" → "whatsapp:+947X"
     const normalized = toPhone.startsWith("+")
       ? `whatsapp:${toPhone}`
       : `whatsapp:+94${toPhone.substring(1)}`;
