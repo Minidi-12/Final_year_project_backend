@@ -10,26 +10,22 @@ export const login = async (req: Request, res: Response) => {
     const validatedData = loginSchema.parse(req.body);
     const { email, password, role } = validatedData;
 
-    // Find user by email AND role
     const user = await User.findOne({ email, role });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Generate token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET as string,
       { expiresIn: "1d" }
     );
 
-    // If GN Officer, fetch their division 
     let gnDivision = null;
     let gnOfficerId = null;
 
@@ -52,8 +48,8 @@ export const login = async (req: Request, res: Response) => {
         role:         user.role,
         email:        user.email,
         isFirstLogin: user.isFirstLogin,
-        gnDivision,      // ← division name e.g. "Walpita"
-        gnOfficerId,     // ← GnOfficer _id
+        gnDivision,      
+        gnOfficerId,     
       },
     });
 

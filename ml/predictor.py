@@ -1,47 +1,57 @@
+from sklearn.linear_model import LinearRegression
 import numpy as np
-
 class UrgencyPredictor:
     def predict_3_months(self, row, current_score):
-        status = row.get('status', 'pending')
-        gn_verified = row.get('gn_verified', False)
-        
-        predictions = []
-        
-        for month in range(1, 4):
-            if status == 'resolved':
-                predicted_score = 0
-            elif current_score > 70 and status == 'pending':
-                increase = np.random.randint(5, 8)
-                predicted_score = min(current_score + (increase * month), 100)
-            elif 50 <= current_score <= 70 and not gn_verified:
-                increase = np.random.randint(3, 6)
-                predicted_score = min(current_score + (increase * month), 100)
-            elif current_score < 50:
-                GovtAllowance = row.get('GovtAllowance', {})
-                has_support = isinstance(GovtAllowance, dict) and GovtAllowance.get('receiving', False)
-                
-                if has_support:
-                    predicted_score = max(current_score - 2, 0)
-                else:
-                    predicted_score = current_score
-            else:
-                predicted_score = current_score
-            
-            predictions.append({
-                'month': month,
-                'score': round(predicted_score, 2)
-            })
-        
-        return predictions
 
-    def predict_all(self, df, urgency_scores):
+        monthly_income    = float(row.get('monthly_income', 0))
+        has_support       = len(row.get('GovtAllowance', [])) > 0
+        is_chronic        = row.get('chronic_illness_exists', 0)
+        gn_verified       = int(row.get('gn_verified', False))
+        status            = row.get('status', 'pending')
+        income_pressure = max(0, (25000 - monthly_income) / 25000 * 10)
+        support_relief  = -3 if has_support else 0
+        chronic_drift   = 2 if is_chronic else 0
+        verified_relief = -2 if gn_verified else 0
+
+        monthly_drift = income_pressure + support_relief + chronic_drift + verified_relief
+
+        past_scores = [
+            max(0, current_score - monthly_drift * 3),
+            max(0, current_score - monthly_drift * 2),
+            max(0, current_score - monthly_drift),
+            current_score
+        ]
+
+        X = np.array([[-3], [-2], [-1], [0]])
+        y = np.array(past_scores)
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        X_future = np.array([[1], [2], [3]])
+        predicted = model.predict(X_future)
+
+        predictions = []
+        for month, score in enumerate(predicted, 1):
+            if status == 'resolved':
+                score = 0
+            score = round(float(np.clip(score, 0, 100)), 2)
+            predictions.append({'month': month, 'score': score})
+
+        return predictions
+    
+    def predict_all(self, profiles_df, urgency_scores):
         all_predictions = []
         
-        for idx, row in df.iterrows():
-            current_score = urgency_scores[idx]
-            predictions = self.predict_3_months(row, current_score)
-            all_predictions.append(predictions)
+        for idx, row in profiles_df.iterrows():
+            if idx < len(urgency_scores):
+                current_score = urgency_scores[idx]
+                predictions = self.predict_3_months(row, current_score)
+                all_predictions.append(predictions)
+            else:
+                # Fallback if index mismatch
+                all_predictions.append([])
         
-        print(f"Generated predictions for {len(all_predictions)} beneficiaries")
+        print(f"  Generated predictions for {len(all_predictions)} beneficiaries")
         
         return all_predictions

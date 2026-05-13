@@ -18,7 +18,6 @@ B_ReqRouter
 
 B_ReqRouter.post('/images', uploadProductImage);
 
-// Test risk alerts manually
 B_ReqRouter.get("/test-risk-alerts", async (req, res, next) => {
   try {
     await runRiskEscalationCheck();

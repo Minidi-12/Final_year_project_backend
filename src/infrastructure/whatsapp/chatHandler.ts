@@ -2,11 +2,9 @@ import { sendWhatsApp } from "./twilioClient";
 import { getSession, setSession, clearSession } from "./sessionStore";
 import B_Req from "../db/entities/B_Req";
 
-// Intent detection (simple NLP keyword matching)
 const detectIntent = (text: string): string => {
   const t = text.toLowerCase().trim();
 
-  // Status check intents
   if (t.match(/\b(status|check|request|my request|where|update)\b/)) return "CHECK_STATUS";
   if (t.match(/\b(hi|hello|help|start|menu|helo|hai)\b/))             return "GREETING";
   if (t.match(/\b(reference|ref|number|id)\b/))                       return "ASK_REF";
@@ -20,20 +18,17 @@ const detectIntent = (text: string): string => {
 
 const MENU = ` *Welcome to HopeConnect Support!*\n\nHow can I help you today?\n\n 1. Check request status\n 2. Get help\n\nReply with a number or type your question.`;
 
-// Main handler
 export const handleIncomingMessage = async (from: string, body: string) => {
   const phone  = from.replace("whatsapp:", "");
   const session = getSession(from);
   const intent  = detectIntent(body);
   const text    = body.trim();
 
-  // CANCEL anytime
   if (intent === "CANCEL") {
     clearSession(from);
     return sendWhatsApp(phone, " Session ended. Text *hi* anytime to start again.\n\n_HopeConnect Foundation_");
   }
 
-  // MENU / GREETING
   if (session.step === "MENU" || intent === "GREETING") {
     if (text === "1" || intent === "CHECK_STATUS") {
       setSession(from, "AWAIT_NIC_OR_REF");
@@ -52,11 +47,9 @@ export const handleIncomingMessage = async (from: string, body: string) => {
     }
     return sendWhatsApp(phone, MENU);
   }
-
-  // WAITING FOR NIC OR REFERENCE NUMBER 
+ 
   if (session.step === "AWAIT_NIC_OR_REF") {
 
-    // User sent a NIC number
     if (intent === "IS_NIC") {
       const req = await B_Req.findOne({ "b_profile.nic": text }).sort({ created_at: -1 });
       clearSession(from);
@@ -69,7 +62,6 @@ export const handleIncomingMessage = async (from: string, body: string) => {
       return sendWhatsApp(phone, buildStatusMessage(req));
     }
 
-    // User sent a Reference ID
     if (intent === "IS_REF") {
       const req = await B_Req.findOne({ reference_no: text.toUpperCase() });
       clearSession(from);
@@ -82,7 +74,6 @@ export const handleIncomingMessage = async (from: string, body: string) => {
       return sendWhatsApp(phone, buildStatusMessage(req));
     }
 
-    // Not a valid NIC or ref
     return sendWhatsApp(phone,
       ` *Invalid format*\n\nPlease send:\n` +
       `• NIC: 12 digits (199012345678) or 9 digits + V/X (901234567V)\n` +
@@ -90,12 +81,10 @@ export const handleIncomingMessage = async (from: string, body: string) => {
     );
   }
 
-  //FALLBACK 
   clearSession(from);
   return sendWhatsApp(phone, MENU);
 };
 
-// Format status message
 const buildStatusMessage = (req: any): string => {
   const profile = req.b_profile?.[0];
   const statusEmoji: Record<string, string> = {

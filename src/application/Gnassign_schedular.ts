@@ -15,7 +15,6 @@ export const runGnAssignment = async () => {
     year: "numeric",
   });
 
-  // 1. Get all pending requests
   const pendingRequests = await B_Req.find({ status: "pending" });
 
   if (pendingRequests.length === 0) {
@@ -23,7 +22,6 @@ export const runGnAssignment = async () => {
     return;
   }
 
-  // 2. Group requests by GN Division
   const byDivision = new Map<string, typeof pendingRequests>();
 
   for (const req of pendingRequests) {
@@ -33,7 +31,6 @@ export const runGnAssignment = async () => {
     byDivision.get(key)!.push(req);
   }
 
-  // FIX 1: Array.from() solves the MapIterator TS2802 error
   for (const [divisionId, requests] of Array.from(byDivision.entries())) {
     const gnDivision = await Gn_Division.findById(divisionId);
 
@@ -42,7 +39,6 @@ export const runGnAssignment = async () => {
       isActive: true,
     });
 
-    // FIX 2: Explicit type for 'r' solves the TS7006 implicit any error
     const reqIds = requests.map((r: (typeof pendingRequests)[number]) => r._id);
 
     await B_Req.updateMany(
@@ -55,7 +51,6 @@ export const runGnAssignment = async () => {
       }
     );
 
-    // Notify each beneficiary + save notification
     for (const req of requests) {
       const profile = req.b_profile[0];
       const notifMsg = templates.gnAssigned(
@@ -73,7 +68,6 @@ export const runGnAssignment = async () => {
       await sendWhatsApp(profile.phone_no, notifMsg);
     }
 
-    // Notify the GN Officer
     if (officer) {
       const officerMsg = templates.gnOfficerAssigned(
         officer.name,
@@ -97,7 +91,6 @@ export const runGnAssignment = async () => {
   console.log(" [Cron] GN Assignment Job completed.");
 };
 
-// Runs on the 15th of every month at 9:00 AM
 export const startGnAssignmentScheduler = () => {
   cron.schedule("0 9 15 * *", async () => {
     try {

@@ -1,4 +1,3 @@
-// Simple in-memory session — tracks where each user is in conversation
 const sessions = new Map<string, { step: string; data: Record<string, any> }>();
 
 export const getSession = (phone: string) => {
