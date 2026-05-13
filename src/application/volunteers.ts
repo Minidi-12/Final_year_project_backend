@@ -1,4 +1,3 @@
-// application/volunteers.ts
 import { Request, Response, NextFunction } from "express";
 import Volunteerdto, { VolunteerMatchPreviewDto, RunMatchingDto } from "../domain/dto/Volunteerdto";
 import ValidationError from "../domain/errors/validation-error";
@@ -46,20 +45,17 @@ const createVolunteer = async (
     try {
         const volunteerData = Volunteerdto.parse(req.body);
         
-        // Check if project exists
         const project = await Project.findById(volunteerData.project_id);
         if (!project) {
             throw new NotFoundError("Project not found");
         }
         
-        // Check if project is active
         if (project.status !== 'active') {
             return res.status(400).json({ 
                 error: "This project is no longer accepting volunteers" 
             });
         }
         
-        // Check for duplicate registration
         const existingVolunteer = await Volunteer.findOne({
             email: volunteerData.email,
             project_id: volunteerData.project_id
@@ -71,10 +67,8 @@ const createVolunteer = async (
             });
         }
         
-        // Create volunteer
         const volunteer = await Volunteer.create(volunteerData);
         
-        // Run ML matching script in background
         const scriptPath = path.join(__dirname, '../../ml/volunteer_matching.py');
         exec(`python ${scriptPath}`, (error, stdout, stderr) => {
             if (error) {
@@ -121,7 +115,6 @@ const updateVolunteer = async (
             throw new NotFoundError("Volunteer not found");
         }
         
-        // Re-run matching if skills changed
         if (volunteerData.skills) {
             const scriptPath = path.join(__dirname, '../../ml/volunteer_matching.py');
             exec(`python ${scriptPath}`, (error) => {
@@ -160,7 +153,6 @@ const deleteVolunteerById = async (
     }
 };
 
-// NEW: Get volunteer with ML recommendations
 const getVolunteerRecommendations = async (
     req: Request,
     res: Response,
@@ -185,7 +177,6 @@ const getVolunteerRecommendations = async (
     }
 };
 
-// NEW: Preview matching projects for given skills (instant, no DB save)
 const previewMatchingProjects = async (
     req: Request,
     res: Response,
@@ -194,7 +185,6 @@ const previewMatchingProjects = async (
     try {
         const { skills } = VolunteerMatchPreviewDto.parse(req.body);
         
-        // Get all active projects
         const projects = await Project.find({ status: 'active' });
         
         if (projects.length === 0) {
@@ -204,11 +194,9 @@ const previewMatchingProjects = async (
             });
         }
         
-        // Simple JavaScript matching (instant preview)
         const matches = projects.map(project => {
             const projectSkills = project.requiredSkills || [];
             
-            // Find matched skills (case-insensitive partial match)
             const matchedSkills = skills.filter(skill => 
                 projectSkills.some(ps => 
                     ps.toLowerCase().includes(skill.toLowerCase()) ||
@@ -216,7 +204,6 @@ const previewMatchingProjects = async (
                 )
             );
             
-            // Calculate match score (Jaccard similarity)
             const union = new Set([...skills, ...projectSkills]);
             const intersection = matchedSkills.length;
             const matchScore = Math.round((intersection / union.size) * 100);
@@ -243,7 +230,7 @@ const previewMatchingProjects = async (
         })
         .filter(m => m.matchScore > 0)
         .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 10); // Top 10 matches
+        .slice(0, 10);
         
         res.status(200).json({
             count: matches.length,
@@ -264,7 +251,6 @@ const previewMatchingProjects = async (
     }
 };
 
-// NEW: Manually trigger ML matching script
 const runMLMatching = async (
     req: Request,
     res: Response,

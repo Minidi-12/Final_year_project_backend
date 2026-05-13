@@ -34,7 +34,6 @@ export const notifyStatusChanged = async (
 
   const profile = req.b_profile[0];
 
-  // Route to specific notification
   if (newStatus === "gn_assigned") {
     return notifyGnAssigned(reqId);
   }
@@ -45,7 +44,6 @@ export const notifyStatusChanged = async (
     return notifyRequestResolved(reqId);
   }
 
-  // Generic status update
   const notifTypeMap: Record<string, string> = {
     flagged:  "request_rejected",
     rejected: "request_rejected",

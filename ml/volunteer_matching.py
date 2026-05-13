@@ -8,7 +8,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
 class VolunteerProjectMatcher:
     def __init__(self):
         self.client = MongoClient(os.getenv("MONGO_URI"))
@@ -32,7 +31,6 @@ class VolunteerProjectMatcher:
         return df
     
     def prepare_project_skills_text(self, project):
-        # Handle requiredSkills field
         skills = project.get('requiredSkills', [])
         if not isinstance(skills, list):
             skills = []
@@ -165,9 +163,7 @@ class VolunteerProjectMatcher:
         return result.modified_count > 0
     
     def batch_compute_all_matches(self):
-        print("\n BATCH MATCHING ALL VOLUNTEERS ")
         
-        # compute embeddings for all projects
         projects_df = self.load_projects()
         if len(projects_df) == 0:
             print("No projects to match against")

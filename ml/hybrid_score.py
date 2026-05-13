@@ -9,10 +9,9 @@ class HybridUrgencyScorer:
         self.rule_weight = rule_weight
         self.ml_weight = ml_weight
         
-        # Mapping labels to numerical scores
         self.label_to_score = {
-            'High': 80,
-            'Moderate': 50,
+            'High': 70,
+            'Moderate': 40,
             'Stable': 20
         }
     
@@ -23,7 +22,6 @@ class HybridUrgencyScorer:
         )
         
         if not use_ml or not self.ml_model.is_trained:
-            # ML not available, use rule-based only
             label = self.rule_scorer.get_urgency_label(rule_score)
             return rule_score, label, {'method': 'rule_based_only'}
         

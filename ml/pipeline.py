@@ -1,113 +1,152 @@
-import sys
 import numpy as np
-from datetime import datetime
+import pandas as pd
+from pymongo import MongoClient
+from config import (
+    MONGO_URI, MONGO_DB_NAME, COLLECTION_NAME,
+    RANDOM_STATE, RULE_BASED_WEIGHT, ML_WEIGHT,
+    OUTPUT_DIR
+)
+from district_analysis import DistrictPovertyIndex, run as run_district_analysis
 from data_processor import DataProcessor
-from clustering import ClusterAnalyzer
 from urgency_score import UrgencyScore
 from ml_model import MLUrgencyModel
 from hybrid_score import HybridUrgencyScorer
-from predictor import UrgencyPredictor
-from config import N_CLUSTERS, OUTPUT_DIR
-import os
+from clustering import ClusterAnalyzer         
+from predictor import UrgencyPredictor         
 
-def main():
-    print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
-    try:
-        # Step 1: Load and prepare data
-        processor = DataProcessor()
-        df, features, scaled_data, collection, beneficiary_profiles = processor.prepare_data()
-        
-        print(f"DATA QUALITY CHECK")
-        print(f"DataFrame shape: {df.shape}")
-        print(f"Features shape: {features.shape}")
-        print(f"Beneficiary profiles: {len(beneficiary_profiles)}")
-        
-        # Step 2: PCA and Clustering
-        
-        cluster_analyzer = ClusterAnalyzer()
-        pca_coords = cluster_analyzer.perform_pca(scaled_data)
-        cluster_analyzer.plot_pca_scatter(pca_coords, title="PCA Visualization (Before Clustering)")
-        
-        cluster_labels = cluster_analyzer.hierarchical_clustering(scaled_data)
-        cluster_analyzer.plot_dendrogram()
-        cluster_analyzer.plot_pca_scatter(pca_coords, cluster_labels, title="PCA Visualization (Clustered)")
-        
-        # Step 3: Train ML Model (if enough data)
-        
-        ml_model = MLUrgencyModel()
-        use_ml = False
-        
-        if len(beneficiary_profiles) >= 10:
-            print(f"Training ML model with synthetic data augmentation...")
-            urgency_scorer = UrgencyScore()
-            feature_importance = ml_model.train(beneficiary_profiles, urgency_scorer, use_synthetic=True)
-            use_ml = True
-        else:
-            print(f"WARNING: Only {len(beneficiary_profiles)} samples. Need at least 10 to train ML.")
-            print(f"Using rule-based scoring only.")
-        
-        # Step 4: Hybrid Urgency Scoring
-        
-        hybrid_scorer = HybridUrgencyScorer(rule_weight=0.6, ml_weight=0.4)
-        if use_ml:
-            hybrid_scorer.ml_model = ml_model
-        
-        urgency_scores, urgency_labels, score_details = hybrid_scorer.score_all_beneficiaries(
-            beneficiary_profiles, 
-            use_ml=use_ml
+
+def connect_db():
+    client = MongoClient(MONGO_URI)
+    db     = client[MONGO_DB_NAME]
+    print(f" Connected to MongoDB — database: {MONGO_DB_NAME}")
+    return db
+
+
+def load_profiles(db):
+    collection = db[COLLECTION_NAME]
+    docs       = list(collection.find({}))
+    print(f"  Loaded {len(docs)} documents from '{COLLECTION_NAME}'")
+
+    processor = DataProcessor()
+    profiles  = processor.process(docs)         
+    return profiles, docs, processor
+
+
+def run_pipeline():
+
+    print("\n[STEP 1] District Poverty Analysis")
+    run_district_analysis()
+    dpi = DistrictPovertyIndex("outputs/district_poverty_index.json")
+
+    print("\n[STEP 2] Loading profiles from MongoDB")
+    db                        = connect_db()
+    profiles_df, docs, processor = load_profiles(db)
+
+    if len(profiles_df) == 0:
+        print("  No profiles found. Exiting.")
+        return
+
+    print("\n[STEP 3] Rule-Based Urgency Scoring + District Bonus")
+    urgency_scorer = UrgencyScore()
+    rule_scores, rule_labels = urgency_scorer.score_all_beneficiaries(
+        profiles_df, district_index=dpi
+    )
+
+    print("\n[STEP 4] ML Urgency Model (Random Forest)")
+    ml_model = MLUrgencyModel()
+    if not ml_model.load_model():
+        print("  Training new model")
+        ml_model.train(profiles_df, urgency_scorer, use_synthetic=True)
+
+    print(f"\n[STEP 5] Hybrid Scoring "
+          f"({int(RULE_BASED_WEIGHT*100)}% Rules + {int(ML_WEIGHT*100)}% ML)")
+    hybrid_scorer          = HybridUrgencyScorer(
+        rule_weight=RULE_BASED_WEIGHT,
+        ml_weight=ML_WEIGHT
+    )
+    hybrid_scorer.ml_model = ml_model 
+
+    final_scores  = []
+    final_labels  = []
+    final_details = []
+
+    for _, row in profiles_df.iterrows():
+        score, label, details = hybrid_scorer.score_beneficiary(
+            row, use_ml=True
         )
-        
-        # Step 5: Future Predictions
-        
-        predictor = UrgencyPredictor()
-        predictions = predictor.predict_all(df, urgency_scores)
-        
-        # Step 6: Update MongoDB
-
-        update_count = 0
-        
-        for idx, row in df.iterrows():
-            doc_id = row['_id']
-            
-            update_data = {
-                'clusterId': int(cluster_labels[idx]),
-                'urgency_score': urgency_scores[idx],
-                'urgency_label': urgency_labels[idx],
-                'Predictions': predictions[idx],
-                'pca_x': float(pca_coords[idx, 0]),
-                'pca_y': float(pca_coords[idx, 1]),
-                'ml_details': score_details[idx],
-                'generated_at': datetime.now()
-            }
-            
-            collection.update_one(
-                {'_id': doc_id},
-                {'$set': update_data}
+        bonus = dpi.get_bonus(row.get("gn_division", ""))
+        if bonus > 0:
+            score                    = min(score + bonus, 100)
+            details["district_bonus"] = bonus
+            details["district"]       = dpi.get_district(
+                row.get("gn_division", "")
             )
-            update_count += 1
-        
-        print(f" Updated {update_count} records in MongoDB")
-        
-        # Step 7: Summary Report
-        print(f"Total Beneficiaries Processed: {len(df)}")
-        print(f"Clustering: {N_CLUSTERS} clusters identified")
-        print(f"PCA Variance Captured: {cluster_analyzer.pca.explained_variance_ratio_.sum():.1%}")
-        print(f"ML Model: {'Trained ✓' if use_ml else 'Not used (insufficient data)'}")
-        print(f"Urgency Distribution:")
-        print(f" High: {urgency_labels.count('High')}")
-        print(f" Moderate: {urgency_labels.count('Moderate')}")
-        print(f" Stable: {urgency_labels.count('Stable')}")
-        print(f"\nOutputs saved to: {OUTPUT_DIR}/")
-        print(f"Model saved to: models/urgency_classifier.pkl")
-        print(f"\n Pipeline completed successfully!")
-        print(f"Finished at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
-    except Exception as e:
-        print(f"\n ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+        final_scores.append(round(score, 2))
+        final_labels.append(urgency_scorer.get_urgency_label(score))
+        final_details.append(details)
+
+    high     = final_labels.count('High')
+    moderate = final_labels.count('Moderate')
+    stable   = final_labels.count('Stable')
+    print(f"  High: {high} | Moderate: {moderate} | Stable: {stable}")
+    print(f"  Range: {min(final_scores):.1f} – {max(final_scores):.1f} | "
+          f"Avg: {np.mean(final_scores):.1f}")
+
+    print("\n[STEP 6] Hierarchical Clustering + PCA")
+    _, scaled_data   = processor.extract_scaled_features(profiles_df)
+    cluster_analyzer = ClusterAnalyzer()
+    cluster_results  = cluster_analyzer.analyze(profiles_df, scaled_data)
+
+    print("\n[STEP 7] 3-Month Urgency Predictions")
+    predictor   = UrgencyPredictor()
+    predictions = predictor.predict_all(profiles_df, final_scores)
+
+    print("\n[STEP 8] Writing results to MongoDB")
+    collection = db[COLLECTION_NAME]
+    updated    = 0
+
+    for i, doc in enumerate(docs):
+        if i >= len(final_scores):
+            break
+
+        cluster_info = cluster_results[i] if i < len(cluster_results) else {}
+        gn_division  = doc.get("b_profile", [{}])[0].get("gn_division", "")
+
+        update = {
+            "$set": {
+                "urgency_score"    : final_scores[i],
+                "urgency_label"    : final_labels[i],
+                "ml_details"       : final_details[i],
+                "pca_x"            : cluster_info.get("pca_x", 0.0),
+                "pca_y"            : cluster_info.get("pca_y", 0.0),
+                "clusterId"        : cluster_info.get("cluster_id", 1),
+                "Predictions"      : predictions[i] if i < len(predictions) else [],
+                "district_dpi"     : dpi.get_dpi(dpi.get_district(gn_division)),
+                "district_cluster" : dpi.get_cluster(gn_division),
+            }
+        }
+
+        result = collection.update_one({"_id": doc["_id"]}, update)
+        if result.modified_count > 0:
+            updated += 1
+
+    print(f"  Updated {updated}/{len(docs)} documents")
+
+    print("\n" + "=" * 60)
+    print("  PIPELINE COMPLETE")
+    print(f"  Profiles processed : {len(profiles_df)}")
+    print(f"  High urgency       : {high}")
+    print(f"  Moderate urgency   : {moderate}")
+    print(f"  Stable             : {stable}")
+    print(f"  DB updated         : {updated} documents")
+    print("=" * 60)
+
+    return {
+        "scores"  : final_scores,
+        "labels"  : final_labels,
+        "updated" : updated,
+    }
+
 
 if __name__ == "__main__":
-    main()
+    run_pipeline()

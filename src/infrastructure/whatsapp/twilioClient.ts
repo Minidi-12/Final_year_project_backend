@@ -28,7 +28,6 @@ export const sendWhatsApp = async (
 
     console.log(` WhatsApp sent to ${normalized}`);
   } catch (error) {
-    // Log but don't crash the app if WhatsApp fails
     console.error(` WhatsApp failed to ${toPhone}:`, error);
   }
 };

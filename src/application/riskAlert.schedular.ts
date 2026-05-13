@@ -5,7 +5,7 @@ import GnOfficer from "../infrastructure/db/entities/Gnofficer";
 import { sendWhatsApp } from "../infrastructure/whatsapp/twilioClient";
 
 const CRITICAL_THRESHOLD = 90;
-const WORSENING_THRESHOLD = 15; // score increase between months
+const WORSENING_THRESHOLD = 15; 
 
 interface RiskCase {
   name:      string;
@@ -20,7 +20,6 @@ interface RiskCase {
 export const runRiskEscalationCheck = async () => {
   console.log(" [Risk Alert] Running escalation check...");
 
-  // Find all pending/gn_assigned cases with predictions
   const atRiskCases = await B_Req.find({
     status:      { $in: ["pending", "gn_assigned"] },
     "Predictions.0": { $exists: true },
@@ -33,7 +32,6 @@ export const runRiskEscalationCheck = async () => {
     const current    = req.urgency_score ?? 0;
     const predictions = req.Predictions || [];
 
-    // Find max predicted score in months 2 and 3
     const futureScores = predictions
       .filter((p: any) => p.month >= 2)
       .map((p: any) => p.score ?? 0);
@@ -43,7 +41,6 @@ export const runRiskEscalationCheck = async () => {
     const maxPredicted = Math.max(...futureScores);
     const trend        = maxPredicted - current;
 
-    //Escalation conditions
     const willBecomeCritical = maxPredicted >= CRITICAL_THRESHOLD;
     const isWorsening        = trend >= WORSENING_THRESHOLD;
     const isAlreadyHigh      = current >= 70;
@@ -68,13 +65,10 @@ export const runRiskEscalationCheck = async () => {
 
   console.log(` [Risk Alert] Found ${escalations.length} at-risk cases`);
 
-  // 2. Sort by predicted score (highest risk first)
   escalations.sort((a, b) => b.predicted - a.predicted);
 
-  // 3. Send alert to NGO admin
   await notifyAdmin(escalations);
 
-  // 4. Notify each at-risk beneficiary
   for (const c of escalations) {
     if (c.phone) {
       await notifyBeneficiary(c);
@@ -84,9 +78,7 @@ export const runRiskEscalationCheck = async () => {
   console.log(" [Risk Alert] Escalation alerts sent.");
 };
 
-// Alert to admin
 const notifyAdmin = async (cases: RiskCase[]) => {
-  // Get admin phone from GnOfficers or hardcode admin number
   const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER || "";
   if (!adminPhone) {
     console.warn(" ADMIN_WHATSAPP_NUMBER not set in .env");
@@ -100,34 +92,32 @@ const notifyAdmin = async (cases: RiskCase[]) => {
   ).join("\n\n");
 
   const msg =
-    ` *HopeLink Risk Alert*\n\n` +
+    ` *HopeConnect Risk Alert*\n\n` +
     ` *${cases.length} case(s)* predicted to reach critical urgency.\n\n` +
     `*Top Priority Cases:*\n\n${caseList}\n\n` +
     `${cases.length > 3 ? `...and ${cases.length - 3} more cases\n\n` : ""}` +
     `Please log in to review these cases immediately.\n` +
     `🔗 Dashboard: http://localhost:5173/dashboard\n\n` +
-    `_HopeLink Automated Risk System_ 🇱🇰`;
+    `_HopeConnect Automated Risk System`;
 
   await sendWhatsApp(adminPhone, msg);
   console.log(` [Risk Alert] Admin notified at ${adminPhone}`);
 };
 
-// Alert to beneficiary 
 const notifyBeneficiary = async (c: RiskCase) => {
   const msg =
-    ` *Important Update — HopeLink*\n\n` +
+    ` *Important Update — HopeConnect*\n\n` +
     `Dear ${c.name},\n\n` +
     `Our system has detected that your situation may become more urgent soon. ` +
     `To ensure you receive timely support, please make sure your contact details are up to date.\n\n` +
     ` *Reference:* ${c.reference}\n` +
     ` *Division:* ${c.division}\n\n` +
     `If your situation has worsened, please contact your GN Officer immediately.\n\n` +
-    `_HopeLink Foundation_ 🇱🇰`;
+    `_HopeConnect Foundation`;
 
   await sendWhatsApp(c.phone, msg);
 };
 
-//every day at 8AM
 export const startRiskAlertScheduler = () => {
   cron.schedule("0 8 * * *", async () => {
     try {

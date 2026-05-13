@@ -26,15 +26,12 @@ class MLUrgencyModel:
         np.random.seed(RANDOM_STATE)
         
         for i in range(n_synthetic):
-            # realistic values based on distributions
             monthly_income = max(0, np.random.normal(income_mean, income_std))
             family_size = np.random.randint(2, 9)
-            
-            # Logical constraints
+        
             chronic_illness_prob = 0.3 if monthly_income < LOW_INCOME_THRESHOLD else 0.15
             chronic_illness_exists = np.random.choice([True, False], p=[chronic_illness_prob, 1-chronic_illness_prob])
             
-            # Low income - likely has government support
             govt_allowance_prob = 0.7 if monthly_income < MEDIUM_INCOME_THRESHOLD else 0.3
             has_govt_allowance = np.random.choice([True, False], p=[govt_allowance_prob, 1-govt_allowance_prob])
             
@@ -105,12 +102,10 @@ class MLUrgencyModel:
             label = urgency_scorer.get_urgency_label(score)
             real_labels.append(label)
         
-        # Combine with synthetic data if enabled
         if use_synthetic and len(real_profiles) < 50:
             synthetic_profiles = self.generate_synthetic_data(real_profiles, n_synthetic=100)
             synthetic_features = self.prepare_ml_features(synthetic_profiles)
             
-            # Label synthetic data using rule-based system
             synthetic_labels = []
             for idx, row in synthetic_profiles.iterrows():
                 score = urgency_scorer.calculate_urgency_score(row)
@@ -126,12 +121,10 @@ class MLUrgencyModel:
             y = real_labels
             print(f"Training data: {len(y)} samples (real only)")
         
-        # Split data
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
         )
         
-        # Train Random Forest
         self.model = RandomForestClassifier(
             n_estimators=100,
             max_depth=10,
@@ -144,7 +137,6 @@ class MLUrgencyModel:
         self.model.fit(X_train, y_train)
         self.is_trained = True
         
-        # Evaluate
         train_score = self.model.score(X_train, y_train)
         test_score = self.model.score(X_test, y_test)
         
@@ -152,16 +144,13 @@ class MLUrgencyModel:
         print(f"  Training Accuracy: {train_score:.2%}")
         print(f"  Testing Accuracy: {test_score:.2%}")
         
-        # Cross-validation
         cv_scores = cross_val_score(self.model, X, y, cv=5)
         print(f"  Cross-Val Accuracy: {cv_scores.mean():.2%} (+/- {cv_scores.std():.2%})")
         
-        # Detailed metrics
         y_pred = self.model.predict(X_test)
         print(f"\nClassification Report:")
         print(classification_report(y_test, y_pred))
         
-        # Feature importance
         importance_df = pd.DataFrame({
             'feature': self.feature_names,
             'importance': self.model.feature_importances_
@@ -171,34 +160,26 @@ class MLUrgencyModel:
         for idx, row in importance_df.head(10).iterrows():
             print(f"  {row['feature']}: {row['importance']:.4f}")
         
-        # Save model
         os.makedirs('models', exist_ok=True)
         joblib.dump(self.model, 'models/urgency_classifier.pkl')
-        print(f"\n✓ Model saved to models/urgency_classifier.pkl")
+        print(f"\nModel saved to models/urgency_classifier.pkl")
         
         return importance_df
     
     def predict(self, profile):
-        """
-        Predict urgency label for a single beneficiary
-        """
         if not self.is_trained:
-            raise ValueError("Model not trained yet! Call train() first.")
+            raise ValueError("Model not trained yet Call train() first.")
         
         features = self.prepare_ml_features(pd.DataFrame([profile]))
         prediction = self.model.predict(features)[0]
         probabilities = self.model.predict_proba(features)[0]
         
-        # Map to class names
         classes = self.model.classes_
         prob_dict = {cls: prob for cls, prob in zip(classes, probabilities)}
         
         return prediction, prob_dict
     
     def predict_all(self, profiles_df):
-        """
-        Predict urgency labels for all beneficiaries
-        """
         if not self.is_trained:
             raise ValueError("Model not trained yet! Call train() first.")
         
@@ -209,12 +190,9 @@ class MLUrgencyModel:
         return predictions, probabilities
     
     def load_model(self, path='models/urgency_classifier.pkl'):
-        """
-        Load a previously trained model
-        """
         if os.path.exists(path):
             self.model = joblib.load(path)
             self.is_trained = True
-            print(f"✓ Model loaded from {path}")
+            print(f"Model loaded from {path}")
             return True
         return False

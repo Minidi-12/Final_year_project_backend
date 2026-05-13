@@ -1,103 +1,89 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from pymongo import MongoClient
 from config import *
-
 class DataProcessor:
     def __init__(self):
-        self.client = MongoClient(MONGO_URI)
-        self.db = self.client[MONGO_DB_NAME]
-        self.collection = self.db[COLLECTION_NAME]
         self.scaler = StandardScaler()
+        
+    def process(self, docs: list) -> pd.DataFrame:
+        if not docs:
+            return pd.DataFrame()
 
-    def load_data(self):
-        data = list(self.collection.find())
-        df = pd.DataFrame(data)
-        return df
-    
-    def extract_features(self, df):
-        features_list = []
-        
-        for idx, row in df.iterrows():
-            b_profile = row.get('b_profile', [])
-            if isinstance(b_profile, list) and len(b_profile) > 0:
-                profile = b_profile[0]
-            else:
-                profile = {}
-            
-            
-            features_list.append({
-                'monthly_income': profile.get('monthly_income', 0),
-                'family_size': profile.get('family_size', 0),
-                'children_under_18': profile.get('children_under_18', 0),
-                'nearest_hospitalkm': profile.get('nearest_hospitalkm', 0),
-                'distanceToSchoolKm': profile.get('distanceToSchoolKm', 0),
-                'selfrated_urgency': profile.get('selfrated_urgency', 3),
-                'disabilityInHousehold': int(profile.get('disabilityInHousehold', False)),
-                'safewater_access': int(profile.get('safewater_access', False)),
-                'electricity_access': int(profile.get('electricity_access', False)),
-                'sanitation_access': int(profile.get('sanitation_access', False)),
-                'regular_Healthcare_Access': int(profile.get('regular_Healthcare_Access', False)),
-                'childrenDroppedOut': int(profile.get('childrenDroppedOut', False)),
-                'GovtAllowance_count': len(profile.get('GovtAllowance', [])),
-                'otherIncomeSources_count': len(profile.get('otherIncomeSources', [])),
-                'chronic_illness_exists': int(profile.get('chronic_illness', {}).get('exists', False)),
-            })
-        
-        features = pd.DataFrame(features_list)
-        
-        features = features.fillna(features.mean())
-        
-        print(f"Extracted {features.shape[1]} features from {features.shape[0]} beneficiaries")
-        print(f"Feature columns: {features.columns.tolist()}")
-
-        return features
-    
-    def extract_beneficiary_profiles(self, df):
         profiles_list = []
-        
-        for idx, row in df.iterrows():
-            b_profile = row.get('b_profile', [])
-            profile = b_profile[0] if isinstance(b_profile, list) and len(b_profile) > 0 else {}
-            
+        for doc in docs:
+            b_profile = doc.get('b_profile', [])
+            profile   = b_profile[0] if isinstance(b_profile, list) and b_profile else {}
+            govt = profile.get('GovtAllowance', [])
+            if not isinstance(govt, list):
+                govt = list(govt) if govt else []
+            other_inc = profile.get('otherIncomeSources', [])
+
+            if not isinstance(other_inc, list):
+                other_inc = [other_inc] if other_inc else []
+
+            chronic = profile.get('chronic_illness', {})
+            if not isinstance(chronic, dict):
+                chronic = {}
+
+            try:
+                urgency = int(profile.get('selfrated_urgency', 3))
+            except (ValueError, TypeError):
+                urgency = 3
+
             profiles_list.append({
-                'monthly_income': profile.get('monthly_income', 0),
-                'chronic_illness': profile.get('chronic_illness', {}),
-                'regular_Healthcare_Access': profile.get('regular_Healthcare_Access', False),
-                'safewater_access': profile.get('safewater_access', False),
-                'sanitation_access': profile.get('sanitation_access', False),
-                'disabilityInHousehold': profile.get('disabilityInHousehold', False),
-                'GovtAllowance': profile.get('GovtAllowance', {}),
-                'otherIncomeSources': profile.get('otherIncomeSources', {}),
-                'childrenDroppedOut': profile.get('childrenDroppedOut', False),
-                'nearest_hospitalkm': profile.get('nearest_hospitalkm', 0),
-                'housing_type': profile.get('housing_type', ''),
-                'selfrated_urgency': profile.get('selfrated_urgency', 3),
-                'family_size': profile.get('family_size', 0),
-                'electricity_access': profile.get('electricity_access', False),
-                'gn_verified': row.get('gn_verified', False),
+                'gn_division'           : profile.get('gn_division', ''),
+                'monthly_income'        : float(profile.get('monthly_income', 0) or 0),
+                'GovtAllowance'         : govt,
+                'otherIncomeSources'    : other_inc,
+                'family_size'           : int(profile.get('family_size', 0) or 0),
+                'children_under_18'     : int(profile.get('children_under_18', 0) or 0),
+                'chronic_illness'       : chronic,
+                'chronic_illness_exists': int(chronic.get('exists', False)),
+                'regular_Healthcare_Access': bool(profile.get('regular_Healthcare_Access', False)),
+                'disabilityInHousehold' : bool(profile.get('disabilityInHousehold', False)),
+                'nearest_hospitalkm'    : float(profile.get('nearest_hospitalkm', 0) or 0),
+                'childrenDroppedOut'    : bool(profile.get('childrenDroppedOut', False)),
+                'distanceToSchoolKm'    : float(profile.get('distanceToSchoolKm', 0) or 0),
+                'housing_type'          : profile.get('housing_type', ''),
+                'housing_temporary'     : int(profile.get('housing_type', '') in
+                                             ['temporary', 'no-fixed_shelter']),
+                'safewater_access'      : bool(profile.get('safewater_access', False)),
+                'sanitation_access'     : bool(profile.get('sanitation_access', False)),
+                'electricity_access'    : bool(profile.get('electricity_access', False)),
+                'selfrated_urgency'     : urgency,
+                'gn_verified'           : bool(doc.get('gn_verified', False)),
+                'status'                : doc.get('status', 'pending'),
             })
-        
-        profiles_df = pd.DataFrame(profiles_list)
-        print(f"Extracted profiles for {len(profiles_df)} beneficiaries")
-        return profiles_df
-    
-    def prepare_data(self):
-        df = self.load_data()
-        
-        if len(df) == 0:
-            raise ValueError("No data found in MongoDB. Please add beneficiary requests first.")
-        
-        beneficiary_profiles = self.extract_beneficiary_profiles(df)
-        
-        features = self.extract_features(df)
-        scaled_features = self.scaler.fit_transform(features)
-        
-        print(f"\n=== DATA PREPARATION COMPLETE ===")
-        print(f"Total beneficiaries: {len(df)}")
-        print(f"Features extracted: {features.shape[1]}")
-        print(f"Scaled data shape: {scaled_features.shape}")
-        print(f"Scaled data range: [{scaled_features.min():.4f}, {scaled_features.max():.4f}]")
-        
-        return df, features, scaled_features, self.collection, beneficiary_profiles
+
+        df = pd.DataFrame(profiles_list)
+        numeric_cols = ['monthly_income', 'family_size', 'children_under_18',
+                        'nearest_hospitalkm', 'distanceToSchoolKm', 'selfrated_urgency']
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+        print(f"  Processed {len(df)} profiles — {len(df.columns)} fields each")
+        return df
+
+    def extract_scaled_features(self, profiles_df: pd.DataFrame):
+        features = pd.DataFrame({
+            'monthly_income'       : profiles_df['monthly_income'],
+            'family_size'          : profiles_df['family_size'],
+            'children_under_18'    : profiles_df['children_under_18'],
+            'nearest_hospitalkm'   : profiles_df['nearest_hospitalkm'],
+            'distanceToSchoolKm'   : profiles_df['distanceToSchoolKm'],
+            'selfrated_urgency'    : profiles_df['selfrated_urgency'],
+            'disabilityInHousehold': profiles_df['disabilityInHousehold'].astype(int),
+            'safewater_access'     : profiles_df['safewater_access'].astype(int),
+            'electricity_access'   : profiles_df['electricity_access'].astype(int),
+            'sanitation_access'    : profiles_df['sanitation_access'].astype(int),
+            'chronic_illness_exists': profiles_df['chronic_illness_exists'],
+            'housing_temporary'    : profiles_df['housing_temporary'],
+        })
+
+        features = features.fillna(0)
+        scaled   = self.scaler.fit_transform(features)
+
+        print(f"  Feature matrix: {features.shape[0]} samples × "
+              f"{features.shape[1]} features")
+        return features, scaled

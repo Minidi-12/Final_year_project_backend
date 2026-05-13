@@ -23,7 +23,6 @@ volunteerRouter
     .put(updateVolunteer)
     .delete(deleteVolunteerById);
 
-// ML Matching routes
 volunteerRouter
     .route('/:id/recommendations')
     .get(getVolunteerRecommendations);
