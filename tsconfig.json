@@ -1,14 +1,18 @@
 {
     "compilerOptions": {
         "sourceMap": true,
-        "outDir": "./src/dist",
+        "rootDir": "src",
+        "outDir": "./dist",
         "strict": true,
         "lib": ["esnext"],
         "esModuleInterop": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "target": "ES2020",
+        "module": "CommonJS",
     },
 
     "ts-node": {
         "files": true
     }
 }
+

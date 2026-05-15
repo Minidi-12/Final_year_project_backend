@@ -2,15 +2,24 @@ import { Request, Response, NextFunction } from "express";
 import GnOfficer from "../infrastructure/db/entities/Gnofficer";
 import ValidationError from "../domain/errors/validation-error";
 import NotFoundError from "../domain/errors/not-found-error";
+import {
+  createGnofficerSchema,
+  updateGnofficerSchema,
+} from "../domain/dto/Gnofficerdto";
+import {
+  uploadFileToS3,
+  deleteFileFromS3,
+  validateFile,
+} from "../infrastructure/fileUpload";
 
 const getAllGn_Officers = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const GnOfficers = await GnOfficer.find().populate("gn_division_id");
-    res.status(200).json(GnOfficers); 
+    res.status(200).json(GnOfficers);
   } catch (error) {
     next(error);
   }
@@ -19,10 +28,12 @@ const getAllGn_Officers = async (
 const getGn_OfficerById = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const foundGnOfficer = await GnOfficer.findById(req.params.id).populate("gn_division_id");
+    const foundGnOfficer = await GnOfficer.findById(req.params.id).populate(
+      "gn_division_id",
+    );
     if (!foundGnOfficer) {
       throw new NotFoundError("GN Officer not found");
     }
@@ -35,18 +46,35 @@ const getGn_OfficerById = async (
 const createGn_Officer = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const gnOfficerData = req.body;
-    if (!gnOfficerData.name) {
-      throw new ValidationError("Officer name is required");
+    let gnOfficerData = req.body;
+
+    // Validate request body
+    const validated = createGnofficerSchema.safeParse(gnOfficerData);
+    if (!validated.success) {
+      const errorMessage =
+        (validated.error as any).errors?.[0]?.message ||
+        (validated.error as any).message ||
+        "Validation failed";
+      throw new ValidationError(errorMessage);
     }
-    if (!gnOfficerData.phone_no) {
-      throw new ValidationError("Phone number is required");
-    }
-    if (!gnOfficerData.gn_division_id) {
-      throw new ValidationError("GN Division is required");
+
+    // Handle file upload if present
+    if ((req as any).file) {
+      try {
+        validateFile((req as any).file);
+        const fileUrl = await uploadFileToS3(
+          (req as any).file.buffer,
+          (req as any).file.originalname,
+          (req as any).file.mimetype,
+        );
+        gnOfficerData.proofFileUrl = fileUrl;
+        gnOfficerData.proofFileName = (req as any).file.originalname;
+      } catch (fileError: any) {
+        throw new ValidationError(fileError.message);
+      }
     }
 
     const newGnOfficer = await GnOfficer.create(gnOfficerData);
@@ -59,13 +87,49 @@ const createGn_Officer = async (
 const updateGn_Officer = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
+    let updateData = req.body;
+
+    // Validate update data
+    const validated = updateGnofficerSchema.safeParse(updateData);
+    if (!validated.success) {
+      const errorMessage =
+        (validated.error as any).errors?.[0]?.message ||
+        (validated.error as any).message ||
+        "Validation failed";
+      throw new ValidationError(errorMessage);
+    }
+
+    // Handle file upload if present
+    if ((req as any).file) {
+      try {
+        validateFile((req as any).file);
+
+        // Get existing officer to delete old file if present
+        const existingOfficer = await GnOfficer.findById(req.params.id);
+        if (existingOfficer?.proofFileUrl) {
+          await deleteFileFromS3(existingOfficer.proofFileUrl);
+        }
+
+        // Upload new file
+        const fileUrl = await uploadFileToS3(
+          (req as any).file.buffer,
+          (req as any).file.originalname,
+          (req as any).file.mimetype,
+        );
+        updateData.proofFileUrl = fileUrl;
+        updateData.proofFileName = (req as any).file.originalname;
+      } catch (fileError: any) {
+        throw new ValidationError(fileError.message);
+      }
+    }
+
     const updatedGnOfficer = await GnOfficer.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true }
+      updateData,
+      { new: true },
     );
     if (!updatedGnOfficer) {
       throw new NotFoundError("GN Officer not found");
@@ -79,13 +143,20 @@ const updateGn_Officer = async (
 const deleteGn_OfficerById = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const deletedGnOfficer = await GnOfficer.findByIdAndDelete(req.params.id);
-    if (!deletedGnOfficer) {
+    const gnofficer = await GnOfficer.findById(req.params.id);
+    if (!gnofficer) {
       throw new NotFoundError("GN Officer not found");
     }
+
+    // Delete proof file from S3 if exists
+    if (gnofficer.proofFileUrl) {
+      await deleteFileFromS3(gnofficer.proofFileUrl);
+    }
+
+    const deletedGnOfficer = await GnOfficer.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "GN Officer deleted successfully" });
   } catch (error) {
     next(error);

@@ -51,28 +51,27 @@ class ClusterAnalyzer:
 
     def _find_optimal_cutoff(self, scaled_data: np.ndarray,
                              max_k: int = 10) -> float:
-        Z    = self.linkage_matrix
-        last = Z[-max_k:, 2][::-1]
+        Z = self.linkage_matrix
+        n = len(Z)
 
-        acceleration = np.diff(last, 2)
-        k = acceleration.argmax() + 2 if len(acceleration) > 0 else N_CLUSTERS
-        k = min(k, N_CLUSTERS)
-
-        cutoff = last[k - 1]
-        return float(cutoff)
+        lower = float(Z[-(N_CLUSTERS),     2])   
+        upper = float(Z[-(N_CLUSTERS - 1), 2])   
+        cutoff = (lower + upper) / 2.0
+        return cutoff
 
     def hierarchical_clustering(self, scaled_data: np.ndarray) -> np.ndarray:
         self.linkage_matrix = linkage(scaled_data, method='ward')
 
         self.optimal_distance = self._find_optimal_cutoff(scaled_data)
         self.cluster_labels   = fcluster(
-            self.linkage_matrix, N_CLUSTERS, criterion='maxclust'
+            self.linkage_matrix, self.optimal_distance, criterion='distance'
         )
 
+        n_actual = int(self.cluster_labels.max())
         print(f"\nHierarchical Clustering (Ward linkage):")
-        print(f"  Optimal cutoff  : {self.optimal_distance:.2f}")
-        print(f"  N clusters used : {N_CLUSTERS}")
-        for i in range(1, N_CLUSTERS + 1):
+        print(f"  Cutoff distance : {self.optimal_distance:.2f}")
+        print(f"  N clusters      : {n_actual}  (target: {N_CLUSTERS})")
+        for i in range(1, n_actual + 1):
             count   = np.sum(self.cluster_labels == i)
             pct     = count / len(self.cluster_labels) * 100
             print(f"  Cluster {i}      : {count} beneficiaries ({pct:.1f}%)")
@@ -115,7 +114,8 @@ class ClusterAnalyzer:
         colors = ['#ef4444', '#f97316', '#22c55e']
 
         if cluster_labels is not None:
-            for i in range(1, N_CLUSTERS + 1):
+            n_actual = int(cluster_labels.max())
+            for i in range(1, n_actual + 1):
                 mask = cluster_labels == i
                 plt.scatter(
                     pca_coords[mask, 0], pca_coords[mask, 1],
@@ -147,8 +147,9 @@ class ClusterAnalyzer:
     def get_cluster_statistics(self) -> dict:
         if self.cluster_labels is None:
             return {}
+        n_actual = int(self.cluster_labels.max())
         stats = {}
-        for i in range(1, N_CLUSTERS + 1):
+        for i in range(1, n_actual + 1):
             count = int(np.sum(self.cluster_labels == i))
             stats[f'cluster_{i}'] = {
                 'count'     : count,
