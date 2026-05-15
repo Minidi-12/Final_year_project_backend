@@ -6,7 +6,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 import joblib
 import os
 from config import *
-
 class MLUrgencyModel:
     def __init__(self):
         self.model = None

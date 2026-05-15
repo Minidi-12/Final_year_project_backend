@@ -18,7 +18,7 @@ from predictor import UrgencyPredictor
 def connect_db():
     client = MongoClient(MONGO_URI)
     db     = client[MONGO_DB_NAME]
-    print(f" Connected to MongoDB — database: {MONGO_DB_NAME}")
+    print(f" Connected to MongoDB - database: {MONGO_DB_NAME}")
     return db
 
 
@@ -72,15 +72,8 @@ def run_pipeline():
 
     for _, row in profiles_df.iterrows():
         score, label, details = hybrid_scorer.score_beneficiary(
-            row, use_ml=True
+            row, use_ml=True, district_index=dpi
         )
-        bonus = dpi.get_bonus(row.get("gn_division", ""))
-        if bonus > 0:
-            score                    = min(score + bonus, 100)
-            details["district_bonus"] = bonus
-            details["district"]       = dpi.get_district(
-                row.get("gn_division", "")
-            )
         final_scores.append(round(score, 2))
         final_labels.append(urgency_scorer.get_urgency_label(score))
         final_details.append(details)
@@ -89,7 +82,7 @@ def run_pipeline():
     moderate = final_labels.count('Moderate')
     stable   = final_labels.count('Stable')
     print(f"  High: {high} | Moderate: {moderate} | Stable: {stable}")
-    print(f"  Range: {min(final_scores):.1f} – {max(final_scores):.1f} | "
+    print(f"  Range: {min(final_scores):.1f} - {max(final_scores):.1f} | "
           f"Avg: {np.mean(final_scores):.1f}")
 
     print("\n[STEP 6] Hierarchical Clustering + PCA")
@@ -132,14 +125,11 @@ def run_pipeline():
 
     print(f"  Updated {updated}/{len(docs)} documents")
 
-    print("\n" + "=" * 60)
-    print("  PIPELINE COMPLETE")
     print(f"  Profiles processed : {len(profiles_df)}")
     print(f"  High urgency       : {high}")
     print(f"  Moderate urgency   : {moderate}")
     print(f"  Stable             : {stable}")
     print(f"  DB updated         : {updated} documents")
-    print("=" * 60)
 
     return {
         "scores"  : final_scores,

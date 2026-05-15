@@ -11,7 +11,7 @@ import geopandas as gpd
 import folium
 from folium.features import GeoJsonTooltip
 
-DCS_POVERTY_LINES_JAN2026 = {
+DCS_POVERTY_LINES_MAR2026 = {
     "Colombo"       : 18000,
     "Gampaha"       : 17908,
     "Kalutara"      : 17520,
@@ -38,7 +38,7 @@ DCS_POVERTY_LINES_JAN2026 = {
     "Ratnapura"     : 16764,
     "Kegalle"       : 17451,
 }
-NATIONAL_POVERTY_LINE_JAN2026 = 16730 
+NATIONAL_POVERTY_LINE_MAR2026 = 16730 
 DCS_HIES2019_HEADCOUNT = {
     "Colombo"       : 2.3,
     "Gampaha"       : 5.7,
@@ -135,9 +135,9 @@ def build_district_dataframe(national: dict) -> pd.DataFrame:
     nat_unemp = national.get("SL.UEM.TOTL.ZS", {}).get("value",  5.0)
 
     rows = []
-    for district, line in DCS_POVERTY_LINES_JAN2026.items():
+    for district, line in DCS_POVERTY_LINES_MAR2026.items():
         headcount = DCS_HIES2019_HEADCOUNT.get(district, 5.0)
-        col_ratio = line / NATIONAL_POVERTY_LINE_JAN2026
+        col_ratio = line / NATIONAL_POVERTY_LINE_MAR2026
         modelled_elec  = min(nat_elec  * (1 / col_ratio) * 0.98 + col_ratio * 2, 100)
         modelled_water = min(nat_water * (1 / col_ratio) * 0.97 + col_ratio * 2, 100)
         modelled_sani  = min(nat_sani  * (1 / col_ratio) * 0.97 + col_ratio * 2, 100)
@@ -149,22 +149,22 @@ def build_district_dataframe(national: dict) -> pd.DataFrame:
 
         rows.append({
             "district"            : district,
-            "poverty_line_jan2026": line,          
+            "poverty_line_mar2026": line,          
             "headcount_2019"      : headcount,      
             "col_ratio"           : round(col_ratio, 4),
             "no_electricity"      : no_elec,
             "no_safe_water"       : no_water,
             "no_sanitation"       : no_sani,
             "unemployment"        : unemp,
-            "poverty_line_source" : "DCS Jan 2026",
+            "poverty_line_source" : "DCS Mar 2026",
             "headcount_source"    : "DCS HIES 2019",
-            "infra_source"        : f"World Bank API {national.get('EG.ELC.ACCS.ZS',{}).get('year','?')} national × col_ratio",
+            "infra_source"        : f"World Bank API {national.get('EG.ELC.ACCS.ZS',{}).get('year','?')} national * col_ratio",
         })
 
     df = pd.DataFrame(rows)
     print(f"  Built {len(df)} district records")
-    print(f"  Poverty line range: Rs.{df['poverty_line_jan2026'].min():,} "
-          f"- Rs.{df['poverty_line_jan2026'].max():,}")
+    print(f"  Poverty line range: Rs.{df['poverty_line_mar2026'].min():,} "
+          f"- Rs.{df['poverty_line_mar2026'].max():,}")
     print(f"  Headcount range: {df['headcount_2019'].min():.1f}% "
           f"- {df['headcount_2019'].max():.1f}%")
     return df
@@ -172,7 +172,7 @@ def build_district_dataframe(national: dict) -> pd.DataFrame:
 def compute_dpi(df: pd.DataFrame) -> pd.DataFrame:
     print("\n COMPUTING DISTRICT POVERTY INDEX (DPI)")
     df = df.copy()
-    df["poverty_line_norm_raw"] = df["poverty_line_jan2026"]
+    df["poverty_line_norm_raw"] = df["poverty_line_mar2026"]
 
     indicators = {
         "headcount_2019"          : 0.35,
@@ -267,9 +267,9 @@ def generate_map(df: pd.DataFrame,
                    "gadm41_LKA_2.json")
             r = requests.get(url, timeout=60)
             open(geojson_path, "w", encoding="utf-8").write(r.text)
-            print(f"  Saved → {geojson_path}")
+            print(f"  Saved - {geojson_path}")
         except Exception as e:
-            print(f"  ⚠  Download failed: {e} — using circle markers")
+            print(f"   Download failed: {e} — using circle markers")
             return _generate_circle_map(df, output)
 
     try:
@@ -288,7 +288,7 @@ def generate_map(df: pd.DataFrame,
         merged["dpi_label"]      = merged["dpi_label"].fillna("Unknown")
         merged["urgency_bonus"]  = merged["urgency_bonus"].fillna(0)
         merged["headcount_2019"] = merged["headcount_2019"].fillna(0)
-        merged["poverty_line_jan2026"] = merged["poverty_line_jan2026"].fillna(0)
+        merged["poverty_line_mar2026"] = merged["poverty_line_mar2026"].fillna(0)
 
         m = folium.Map(
             location=[7.8731, 80.7718],
@@ -325,12 +325,12 @@ def generate_map(df: pd.DataFrame,
             tooltip=GeoJsonTooltip(
                 fields=[
                     "district", "dpi", "dpi_label",
-                    "poverty_line_jan2026", "headcount_2019",
+                    "poverty_line_mar2026", "headcount_2019",
                     "urgency_bonus", "cluster"
                 ],
                 aliases=[
                     "District:", "DPI Score:", "Category:",
-                    "Poverty Line (Jan 2026 Rs.):",
+                    "Poverty Line (Mar 2026 Rs.):",
                     "Poverty Rate (2019 %):",
                     "Urgency Bonus (+pts):",
                     "Cluster:",
@@ -405,7 +405,7 @@ def _generate_circle_map(df: pd.DataFrame, output: str):
             tooltip=(
                 f"<b>{row['district']}</b><br>"
                 f"DPI: {row['dpi']:.1f} ({row.get('dpi_label','')})<br>"
-                f"Poverty Line: Rs.{int(row['poverty_line_jan2026']):,} (Jan 2026)<br>"
+                f"Poverty Line: Rs.{int(row['poverty_line_mar2026']):,} (Mar 2026)<br>"
                 f"Headcount: {row['headcount_2019']:.1f}% (2019)<br>"
                 f"Cluster: {row.get('cluster','?')}<br>"
                 f"Bonus: +{row['urgency_bonus']:.1f} pts"
@@ -446,7 +446,7 @@ def save_json(df: pd.DataFrame,
             "cluster"             : str(row.get("cluster", "Unknown")),
             "lat"                 : coord[0],
             "lng"                 : coord[1],
-            "poverty_line_jan2026": int(row["poverty_line_jan2026"]),
+            "poverty_line_mar2026": int(row["poverty_line_mar2026"]),
             "headcount_2019"      : float(row["headcount_2019"]),
             "col_ratio"           : float(row["col_ratio"]),
             "no_electricity"      : float(row["no_electricity"]),
@@ -458,8 +458,8 @@ def save_json(df: pd.DataFrame,
     result = {
         "metadata": {
             "generated"               : datetime.now().isoformat(),
-            "national_poverty_line"   : NATIONAL_POVERTY_LINE_JAN2026,
-            "poverty_line_source"     : "DCS Sri Lanka — January 2026",
+            "national_poverty_line"   : NATIONAL_POVERTY_LINE_MAR2026,
+            "poverty_line_source"     : "DCS Sri Lanka — March 2026",
             "poverty_line_url"        : "https://www.statistics.gov.lk/povertyLine/2021_Rebase",
             "headcount_source"        : "DCS HIES 2019 (most recent available)",
             "infrastructure_source"   : "World Bank Open Data API (national, auto-fetched)",

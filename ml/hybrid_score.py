@@ -15,10 +15,11 @@ class HybridUrgencyScorer:
             'Stable': 20
         }
     
-    def score_beneficiary(self, profile, use_ml=True):
+    def score_beneficiary(self, profile, use_ml=True, district_index=None):
         rule_score = self.rule_scorer.calculate_urgency_score(
-            profile, 
-            profile.get('gn_verified', False)
+            profile,
+            profile.get('gn_verified', False),
+            district_index=district_index
         )
         
         if not use_ml or not self.ml_model.is_trained:
@@ -50,13 +51,15 @@ class HybridUrgencyScorer:
             label = self.rule_scorer.get_urgency_label(rule_score)
             return rule_score, label, {'method': 'rule_based_fallback'}
     
-    def score_all_beneficiaries(self, profiles_df, use_ml=True):
+    def score_all_beneficiaries(self, profiles_df, use_ml=True, district_index=None):
         scores = []
         labels = []
         details_list = []
         
         for idx, row in profiles_df.iterrows():
-            score, label, details = self.score_beneficiary(row, use_ml)
+            score, label, details = self.score_beneficiary(
+                row, use_ml=use_ml, district_index=district_index
+            )
             scores.append(score)
             labels.append(label)
             details_list.append(details)

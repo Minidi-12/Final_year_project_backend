@@ -43,15 +43,13 @@ class UrgencyPredictor:
     def predict_all(self, profiles_df, urgency_scores):
         all_predictions = []
         
-        for idx, row in profiles_df.iterrows():
-            if idx < len(urgency_scores):
-                current_score = urgency_scores[idx]
+        for pos, (_, row) in enumerate(profiles_df.iterrows()):
+            if pos < len(urgency_scores):
+                current_score = urgency_scores[pos]
                 predictions = self.predict_3_months(row, current_score)
                 all_predictions.append(predictions)
             else:
-                # Fallback if index mismatch
                 all_predictions.append([])
         
         print(f"  Generated predictions for {len(all_predictions)} beneficiaries")
-        
         return all_predictions
