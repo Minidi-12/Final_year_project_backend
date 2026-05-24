@@ -1,35 +1,44 @@
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import S3 from "./s3";
 
-const BUCKET_NAME = process.env.CLOUDFLARE_BUCKET_NAME || "gn-officer-proofs";
-const S3_BASE_URL = `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+const BUCKET_NAME = process.env.CLOUDFLARE_BUCKET_NAME || "ngo";
+const PUBLIC_BASE_URL = process.env.CLOUDFLARE_PUBLIC_DOMAIN || "";
 
 /**
- * Upload a file to S3 (Cloudflare R2)
+ * Upload a file to Cloudflare R2 and return a publicly accessible URL.
  * @param fileBuffer - The file buffer/data
- * @param fileName - Original file name
- * @param fileType - MIME type of the file
- * @returns Public URL of the uploaded file
+ * @param fileName   - Original file name (used to preserve extension)
+ * @param fileType   - MIME type of the file
+ * @returns { fileUrl, file_name } — public URL + sanitised display name
  */
 export const uploadFileToS3 = async (
   fileBuffer: Buffer,
   fileName: string,
   fileType: string,
-): Promise<string> => {
+): Promise<{ fileUrl: string; file_name: string }> => {
   try {
-    const timestamp = Date.now();
-    const uniqueFileName = `gn-officer-proofs/${timestamp}-${fileName}`;
+    if (!PUBLIC_BASE_URL) {
+      throw new Error(
+        "CLOUDFLARE_PUBLIC_DOMAIN is not set. " +
+        "Add it to your .env (e.g. https://pub-xxxx.r2.dev or your custom domain).",
+      );
+    }
+
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const uniqueKey = `${Date.now()}-${safeName}`;
 
     const params = {
       Bucket: BUCKET_NAME,
-      Key: uniqueFileName,
+      Key: uniqueKey,
       Body: fileBuffer,
       ContentType: fileType,
     };
 
     await S3.send(new PutObjectCommand(params));
 
-    return `${S3_BASE_URL}/${BUCKET_NAME}/${uniqueFileName}`;
+    const fileUrl = `${PUBLIC_BASE_URL}/${uniqueKey}`;
+
+    return { fileUrl, file_name: safeName };
   } catch (error) {
     console.error("Error uploading file to S3:", error);
     throw new Error("Failed to upload file");
@@ -37,13 +46,12 @@ export const uploadFileToS3 = async (
 };
 
 /**
- * Delete a file from S3
- * @param fileUrl - The URL of the file to delete
+ * Delete a file from Cloudflare R2
+ * @param fileUrl - The public URL of the file to delete
  */
 export const deleteFileFromS3 = async (fileUrl: string): Promise<void> => {
   try {
-    const urlParts = fileUrl.split("/");
-    const key = urlParts.slice(-2).join("/");
+    const key = fileUrl.replace(`${PUBLIC_BASE_URL}/`, "");
 
     const params = {
       Bucket: BUCKET_NAME,
@@ -58,13 +66,12 @@ export const deleteFileFromS3 = async (fileUrl: string): Promise<void> => {
 
 /**
  * Validate file type and size
- * @param file - Express file object
- * @param maxSize - Max file size in bytes (default 5MB)
- * @returns true if valid, throws error if invalid
+ * @param file    - Express file object
+ * @param maxSize - Max file size in bytes (default 5 MB)
  */
 export const validateFile = (
   file: any,
-  maxSize: number = 5 * 1024 * 1024, // 5MB default
+  maxSize: number = 5 * 1024 * 1024,
 ): boolean => {
   const allowedMimeTypes = [
     "image/jpeg",

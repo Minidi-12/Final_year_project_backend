@@ -65,13 +65,13 @@ const createGn_Officer = async (
     if ((req as any).file) {
       try {
         validateFile((req as any).file);
-        const fileUrl = await uploadFileToS3(
+        const uploadResult = await uploadFileToS3(
           (req as any).file.buffer,
           (req as any).file.originalname,
           (req as any).file.mimetype,
         );
-        gnOfficerData.proofFileUrl = fileUrl;
-        gnOfficerData.proofFileName = (req as any).file.originalname;
+        gnOfficerData.proofFileUrl = uploadResult.fileUrl;
+        gnOfficerData.proofFileName = uploadResult.file_name;
       } catch (fileError: any) {
         throw new ValidationError(fileError.message);
       }
@@ -114,13 +114,13 @@ const updateGn_Officer = async (
         }
 
         // Upload new file
-        const fileUrl = await uploadFileToS3(
+        const uploadResult = await uploadFileToS3(
           (req as any).file.buffer,
           (req as any).file.originalname,
           (req as any).file.mimetype,
         );
-        updateData.proofFileUrl = fileUrl;
-        updateData.proofFileName = (req as any).file.originalname;
+        updateData.proofFileUrl = uploadResult.fileUrl;
+        updateData.proofFileName = uploadResult.file_name;
       } catch (fileError: any) {
         throw new ValidationError(fileError.message);
       }

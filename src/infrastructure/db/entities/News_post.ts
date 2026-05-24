@@ -1,28 +1,69 @@
 import mongoose from "mongoose";
 
 const News_postSchema = new mongoose.Schema({
-  author_name: {
+
+  post_type: {
     type: String,
     required: true,
+    enum: ["activity", "campaign", "upcoming"],
   },
+
   title: {
     type: String,
     required: true,
   },
-  content: {
+
+  description: {
     type: String,
     required: true,
   },
-  image_url: {
+
+  image: {
     type: String,
     required: false,
+    default: "",
   },
-  category: {
+
+  author_name: {
     type: String,
-    required: true,
-    enum: ["general", "project_updates", "volunteer_spotlight", "success_stories", "urgent_needs","awareness_campaigns",
-          "press_releases"],
+    required: false,
+    default: "Admin",
   },
+
+  date: {
+    type: String,
+    required: false,
+    default: "",
+  },
+  location: {
+    type: String,
+    required: false,
+    default: "",
+  },
+
+  time: {
+    type: String,
+    required: false,
+    default: "",
+  },
+  capacity: {
+    type: String,
+    required: false,
+    default: "",
+  },
+
+  tag: {
+    type: String,
+    required: false,
+    default: "",
+  },
+
+  impact: {
+    type: String,
+    required: false,
+    default: "",
+  },
+
   published_at: { type: Date, default: Date.now },
 });
 

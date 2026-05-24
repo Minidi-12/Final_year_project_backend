@@ -22,7 +22,8 @@ const getallB_Reqs = async (
   try {
     const b_reqs = await B_Req.find()
       .populate("gn_division_Id")
-      .populate("Predictions");
+      .populate("Predictions")
+      .populate("req_evidence"); 
     res.status(200).json(b_reqs);
   } catch (error) {
     next(error);
@@ -37,7 +38,8 @@ const getB_ReqById = async (
   try {
     const b_req = await B_Req.findById(req.params.id)
       .populate("gn_division_Id")
-      .populate("Predictions");
+      .populate("Predictions")
+      .populate("req_evidence"); 
     if (!b_req) {
       throw new NotFoundError("Beneficiary Request not found");
     }
@@ -88,16 +90,12 @@ const updateB_Req = async (req: Request, res: Response, next: NextFunction) => {
       throw new NotFoundError("Beneficiary Request not found");
     }
 
-
     const newStatus = req.body.status;
     if (newStatus && newStatus !== existingReq.status) {
-      
       if (newStatus === "verified") {
         await notifyRequestVerified(updatedB_req._id);
-
       } else if (newStatus === "resolved") {
         await notifyRequestResolved(updatedB_req._id);
-
       } else {
         await notifyStatusChanged(updatedB_req._id, newStatus);
       }
