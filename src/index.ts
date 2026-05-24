@@ -19,7 +19,7 @@ import { startRiskAlertScheduler } from './application/riskAlert.schedular';
 
 const app = express();
 app.use(express.json());
-app.use(cors({origin: 'http://localhost:5173'}));
+app.use(cors({origin: 'https://h-connect.netlify.app/'}));
 
 
 app.use('/api/b_reqs', B_ReqRouter);
