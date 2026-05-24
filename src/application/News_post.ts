@@ -4,23 +4,25 @@ import ValidationError from "../domain/errors/validation-error";
 import NotFoundError from "../domain/errors/not-found-error";
 import News_post from "../infrastructure/db/entities/News_post";
 
-const createNews_post = async (req: Request, res: Response, next: NextFunction) => {
+const createNews_post = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const { author_name, title, content, image_url, category } = req.body;
-    const news_post = await News_post.create({
-      author_name,
-      title,
-      content,
-      image_url,
-      category
-    });
+    const validatedData = News_postdto.parse(req.body);
+    const news_post = await News_post.create(validatedData);
     res.status(201).json(news_post);
   } catch (error) {
     next(error);
   }
 };
 
-const getallNews_posts = async (req: Request, res: Response, next: NextFunction) => {
+const getallNews_posts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const news_posts = await News_post.find();
     res.status(200).json(news_posts);
@@ -29,7 +31,11 @@ const getallNews_posts = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-const getNews_postById = async (req: Request, res: Response, next: NextFunction) => {
+const getNews_postById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const news_post = await News_post.findById(req.params.id);
     if (!news_post) {
@@ -41,13 +47,17 @@ const getNews_postById = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-const updateNews_post = async (req: Request, res: Response, next: NextFunction) => {
+const updateNews_post = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const { author_name, title, content, image_url, category } = req.body;
+    const validatedData = News_postdto.partial().parse(req.body);
     const news_post = await News_post.findByIdAndUpdate(
       req.params.id,
-      { author_name, title, content, image_url, category },
-      { new: true }
+      validatedData,
+      { new: true },
     );
     if (!news_post) {
       throw new NotFoundError("News post not found");
@@ -58,7 +68,11 @@ const updateNews_post = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
-const deleteNews_postById = async (req: Request, res: Response, next: NextFunction) => {
+const deleteNews_postById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const news_post = await News_post.findByIdAndDelete(req.params.id);
     if (!news_post) {
@@ -75,6 +89,5 @@ export {
   getallNews_posts,
   getNews_postById,
   updateNews_post,
-  deleteNews_postById
+  deleteNews_postById,
 };
-
