@@ -23,7 +23,7 @@ const getallB_Reqs = async (
     const b_reqs = await B_Req.find()
       .populate("gn_division_Id")
       .populate("Predictions")
-      .populate("req_evidence"); 
+      .populate("req_evidence");
     res.status(200).json(b_reqs);
   } catch (error) {
     next(error);
@@ -39,7 +39,7 @@ const getB_ReqById = async (
     const b_req = await B_Req.findById(req.params.id)
       .populate("gn_division_Id")
       .populate("Predictions")
-      .populate("req_evidence"); 
+      .populate("req_evidence");
     if (!b_req) {
       throw new NotFoundError("Beneficiary Request not found");
     }
@@ -80,9 +80,11 @@ const updateB_Req = async (req: Request, res: Response, next: NextFunction) => {
       throw new NotFoundError("Beneficiary Request not found");
     }
 
+    const { status, gn_verified, gn_notes, admin_notes, updated_at } = req.body;
+
     const updatedB_req = await B_Req.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      { status, gn_verified, gn_notes, admin_notes, updated_at },
       { new: true },
     );
 
@@ -90,7 +92,7 @@ const updateB_Req = async (req: Request, res: Response, next: NextFunction) => {
       throw new NotFoundError("Beneficiary Request not found");
     }
 
-    const newStatus = req.body.status;
+    const newStatus = status;
     if (newStatus && newStatus !== existingReq.status) {
       if (newStatus === "verified") {
         await notifyRequestVerified(updatedB_req._id);
@@ -128,7 +130,7 @@ const deleteB_ReqbyId = async (
 const uploadProductImage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const body = req.body;
@@ -145,7 +147,7 @@ const uploadProductImage = async (
       }),
       {
         expiresIn: 60,
-      }
+      },
     );
 
     res.status(200).json({
