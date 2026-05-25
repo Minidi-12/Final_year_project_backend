@@ -35,7 +35,7 @@ export const login = async (req: Request, res: Response) => {
 
       if (officer) {
         gnOfficerId = officer._id;
-        gnDivision  = (officer.gn_division_id as any)?.gn_division_Name || null;
+        gnDivision  = (officer.gn_division_id as any)?.gn_division_name || null;
       }
     }
 
