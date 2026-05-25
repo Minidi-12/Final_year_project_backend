@@ -38,15 +38,21 @@ const B_Reqdto = z
           "Invalid employment type",
         ),
         GovtAllowance: z
-        .array(
-          z.enum(
-            ["Samurdhi", "Elderly Allowance", "Disability Allowance", "Ath Wasuma", "Other"],
-            "Invalid government allowance"
+          .array(
+            z.enum(
+              [
+                "Samurdhi",
+                "Elderly Allowance",
+                "Disability Allowance",
+                "Ath Wasuma",
+                "Other",
+              ],
+              "Invalid government allowance",
+            ),
           )
-        )
-        .optional()
-        .default([]),
-       otherIncomeSources: z.string().optional().default(""),
+          .optional()
+          .default([]),
+        otherIncomeSources: z.string().optional().default(""),
         chronic_illness: z.object({
           exists: z.boolean().default(false),
           description: z.string().optional(),
@@ -170,6 +176,14 @@ const B_Reqdto = z
       .min(0, "PCA Y should be greater than or equal to 0")
       .nullish()
       .optional(),
+    gn_notes: z
+      .string()
+      .max(500, "GN notes must not exceed 500 characters")
+      .default(""),
+    admin_notes: z
+      .string()
+      .max(500, "Admin notes must not exceed 500 characters")
+      .default(""),
   })
   .passthrough();
 

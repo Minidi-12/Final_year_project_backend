@@ -46,6 +46,8 @@ const B_reqSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  gn_notes:    { type: String, default: "" },
+  admin_notes: { type: String, default: "" },
   reference_no: {
     type: String,
     required: false,
